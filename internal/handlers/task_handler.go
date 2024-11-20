@@ -8,13 +8,14 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/maxzhirnov/go-task-manager/internal/models"
+	"github.com/maxzhirnov/go-task-manager/pkg/database"
 )
 
 type TaskHandler struct {
-	DB *sql.DB
+	DB database.DB
 }
 
-func NewTaskHandler(db *sql.DB) *TaskHandler {
+func NewTaskHandler(db database.DB) *TaskHandler {
 	return &TaskHandler{DB: db}
 }
 
@@ -54,12 +55,12 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, `{"error": "Invalid input data"}`, http.StatusBadRequest)
 		return
 	}
 
 	if task.Title == "" {
-		http.Error(w, "Title is required", http.StatusBadRequest)
+		http.Error(w, `{"error": "Title is required"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -68,7 +69,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := task.CreateTask(h.DB); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, `{"error": "Failed to create task"}`, http.StatusInternalServerError)
 		return
 	}
 

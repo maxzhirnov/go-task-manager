@@ -10,7 +10,15 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func InitDB() (*sql.DB, error) {
+// DB is an interface that both *sql.DB and our mock can implement
+type DB interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Close() error
+}
+
+func InitDB() (DB, error) {
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
 		dbHost = "localhost"

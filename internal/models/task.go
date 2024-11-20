@@ -1,8 +1,9 @@
 package models
 
 import (
-	"database/sql"
 	"time"
+
+	"github.com/maxzhirnov/go-task-manager/pkg/database"
 )
 
 type Task struct {
@@ -14,7 +15,7 @@ type Task struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func GetTasks(db *sql.DB) ([]Task, error) {
+func GetTasks(db database.DB) ([]Task, error) {
 	query := `SELECT id, title, description, status, created_at, updated_at FROM tasks ORDER BY created_at DESC`
 	rows, err := db.Query(query)
 	if err != nil {
@@ -34,14 +35,14 @@ func GetTasks(db *sql.DB) ([]Task, error) {
 	return tasks, nil
 }
 
-func GetTask(db *sql.DB, id int) (Task, error) {
+func GetTask(db database.DB, id int) (Task, error) {
 	var t Task
 	query := `SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE id = $1`
 	err := db.QueryRow(query, id).Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.UpdatedAt)
 	return t, err
 }
 
-func (t *Task) CreateTask(db *sql.DB) error {
+func (t *Task) CreateTask(db database.DB) error {
 	query := `
         INSERT INTO tasks (title, description, status, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5)
@@ -50,10 +51,11 @@ func (t *Task) CreateTask(db *sql.DB) error {
 	t.CreatedAt = time.Now()
 	t.UpdatedAt = time.Now()
 
+	// Scan only the ID
 	return db.QueryRow(query, t.Title, t.Description, t.Status, t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
 }
 
-func (t *Task) UpdateTask(db *sql.DB) error {
+func (t *Task) UpdateTask(db database.DB) error {
 	query := `
         UPDATE tasks
         SET title = $1, description = $2, status = $3, updated_at = $4
@@ -65,7 +67,7 @@ func (t *Task) UpdateTask(db *sql.DB) error {
 	return err
 }
 
-func DeleteTask(db *sql.DB, id int) error {
+func DeleteTask(db database.DB, id int) error {
 	query := `DELETE FROM tasks WHERE id = $1`
 	_, err := db.Exec(query, id)
 	return err

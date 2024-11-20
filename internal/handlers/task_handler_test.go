@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -218,4 +219,33 @@ func TestDeleteTask(t *testing.T) {
 
 	// Ensure all expectations were met
 	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetTaskNotFound(t *testing.T) {
+	// Initialize sqlmock
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	// Mock the expected SQL query to return no rows
+	mock.ExpectQuery("SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE id = ?").
+		WithArgs(999). // Use a task ID that doesn't exist
+		WillReturnError(sql.ErrNoRows)
+
+	// Initialize the handler
+	handler := NewTaskHandler(db)
+
+	// Create a test request with URL parameters
+	req, err := http.NewRequest("GET", "/api/tasks/999", nil)
+	assert.NoError(t, err)
+	req = mux.SetURLVars(req, map[string]string{"id": "999"})
+
+	// Create a response recorder
+	rr := httptest.NewRecorder()
+
+	// Call the handler
+	handler.GetTask(rr, req)
+
+	// Assert the status code (expecting 404 for task not found)
+	assert.Equal(t, http.StatusNotFound, rr.Code)
 }

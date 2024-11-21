@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/maxzhirnov/go-task-manager/internal/models"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
 )
@@ -21,10 +22,23 @@ func NewTaskHandler(db database.DB) *TaskHandler {
 }
 
 func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := models.GetTasks(h.DB)
-	if err != nil {
-		JSONError(w, err.Error(), http.StatusInternalServerError)
+	// Get the user_id from the JWT claims
+	claims, ok := r.Context().Value("claims").(*middleware.Claims)
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
 		return
+	}
+
+	tasks, err := models.GetTasks(h.DB, claims.UserID) // Fetch tasks for the specific user
+	if err != nil {
+		log.Printf("Error fetching tasks: %v", err) // Log the error
+		http.Error(w, `{"error": "Failed to fetch tasks"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// If no tasks exist, return an empty array
+	if tasks == nil {
+		tasks = []models.Task{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -69,6 +83,14 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	if task.Status == "" {
 		task.Status = "pending"
 	}
+
+	// Get the user_id from the JWT claims
+	claims, ok := r.Context().Value("claims").(*middleware.Claims)
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+	task.UserID = claims.UserID // Associate the task with the user
 
 	if err := task.CreateTask(h.DB); err != nil {
 		log.Printf("Error creating task: %v", err) // Log the error

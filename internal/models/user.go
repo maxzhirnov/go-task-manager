@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/lib/pq"
@@ -23,7 +24,7 @@ func (u *User) HashPassword() error {
 	if err != nil {
 		return err
 	}
-	u.Password = string(hashedPassword)
+	u.Password = string(hashedPassword) // Replace plaintext password with hash
 	return nil
 }
 
@@ -42,10 +43,12 @@ func (u *User) CreateUser(db database.DB) error {
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
 
+	log.Printf("Storing hashed password for user %s: %s", u.Username, u.Password)
+
 	err := db.QueryRow(query, u.Username, u.Password, u.CreatedAt, u.UpdatedAt).Scan(&u.ID)
 	if err != nil {
 		// Check if the error is due to a unique constraint violation
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" { // 23505 is the unique constraint violation error code
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" { // Unique constraint violation
 			return fmt.Errorf("username already exists")
 		}
 		return err

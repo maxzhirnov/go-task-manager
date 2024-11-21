@@ -12,13 +12,14 @@ type Task struct {
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	Status      string    `json:"status"`
+	UserID      int       `json:"user_id"` // Associate task with a user
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func GetTasks(db database.DB) ([]Task, error) {
-	query := `SELECT id, title, description, status, created_at, updated_at FROM tasks ORDER BY created_at DESC`
-	rows, err := db.Query(query)
+func GetTasks(db database.DB, userID int) ([]Task, error) {
+	query := `SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE user_id = $1 ORDER BY created_at DESC`
+	rows, err := db.Query(query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,14 +46,14 @@ func GetTask(db database.DB, id int) (Task, error) {
 
 func (t *Task) CreateTask(db database.DB) error {
 	query := `
-        INSERT INTO tasks (title, description, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO tasks (title, description, status, user_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id`
 
 	t.CreatedAt = time.Now()
 	t.UpdatedAt = time.Now()
 
-	err := db.QueryRow(query, t.Title, t.Description, t.Status, t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
+	err := db.QueryRow(query, t.Title, t.Description, t.Status, t.UserID, t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
 	if err != nil {
 		log.Printf("Error inserting task into database: %v", err) // Log the error
 		return err

@@ -22,22 +22,26 @@ func NewAuthHandler(db database.DB) *AuthHandler {
 func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		log.Printf("Error decoding input: %v", err)
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
 	// Hash the password
 	if err := user.HashPassword(); err != nil {
+		log.Printf("Error hashing password: %v", err)
 		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
 		return
 	}
 
+	// Log the hashed password for debugging
+	log.Printf("Hashed password for user %s: %s", user.Username, user.Password)
+
 	// Create the user
 	if err := user.CreateUser(h.DB); err != nil {
-		// Log the error to help with debugging
 		log.Printf("Error creating user: %v", err)
 
-		// Return a more specific error message if it's a duplicate username
+		// Check for duplicate username error
 		if err.Error() == "username already exists" {
 			http.Error(w, "Username already exists", http.StatusConflict)
 			return
@@ -72,14 +76,14 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate a JWT access token
-	accessToken, err := middleware.GenerateJWT(user.Username)
+	// Generate the access token
+	accessToken, err := middleware.GenerateJWT(user.ID, user.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate access token", http.StatusInternalServerError)
 		return
 	}
 
-	// Generate a refresh token
+	// Generate the refresh token
 	refreshToken, err := middleware.GenerateRefreshToken(user.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate refresh token", http.StatusInternalServerError)
@@ -113,7 +117,7 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Generate a new access token
-	accessToken, err := middleware.GenerateJWT(claims.Username)
+	accessToken, err := middleware.GenerateJWT(claims.UserID, claims.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate access token", http.StatusInternalServerError)
 		return

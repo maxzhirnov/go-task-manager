@@ -15,14 +15,16 @@ var jwtRefreshSecret = []byte("your_refresh_secret_key") // Separate key for ref
 
 // Claims represents the JWT claims
 type Claims struct {
+	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
 	jwt.StandardClaims
 }
 
 // GenerateJWT generates a new JWT token
-func GenerateJWT(username string) (string, error) {
-	expirationTime := time.Now().Add(1 * time.Hour)
+func GenerateJWT(userID int, username string) (string, error) {
+	expirationTime := time.Now().Add(1 * time.Hour) // Access token expires in 1 hour
 	claims := &Claims{
+		UserID:   userID,
 		Username: username,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
@@ -34,7 +36,7 @@ func GenerateJWT(username string) (string, error) {
 
 // GenerateRefreshToken generates a new refresh token
 func GenerateRefreshToken(username string) (string, error) {
-	expirationTime := time.Now().Add(7 * 24 * time.Hour) // Set refresh token expiration (e.g., 7 days)
+	expirationTime := time.Now().Add(7 * 24 * time.Hour) // Refresh token expires in 7 days
 	claims := &Claims{
 		Username: username,
 		StandardClaims: jwt.StandardClaims{
@@ -96,8 +98,7 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Add claims to the context
-		ctx := r.Context()
-		ctx = context.WithValue(ctx, "claims", claims)
+		ctx := context.WithValue(r.Context(), "claims", claims)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)

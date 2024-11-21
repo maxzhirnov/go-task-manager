@@ -21,7 +21,7 @@ func TestGetTasks(t *testing.T) {
 		WillReturnRows(mockRows)
 
 	// Call the GetTasks function
-	tasks, err := GetTasks(db)
+	tasks, err := GetTasks(db, 1)
 	assert.NoError(t, err)
 	assert.Len(t, tasks, 1)
 

@@ -32,10 +32,10 @@ func setupRouter() *mux.Router {
 	api.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
 
 	// Serve a default route, e.g., a homepage or a health check
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Welcome to the Task Manager API"))
-	})
+	// r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	w.WriteHeader(http.StatusOK)
+	// 	w.Write([]byte("Welcome to the Task Manager API"))
+	// })
 
 	// Serve static files
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./web")))

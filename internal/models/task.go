@@ -64,9 +64,9 @@ func (t *Task) CreateTask(db database.DB) error {
 
 func (t *Task) UpdateTask(db database.DB) error {
 	query := `
-        UPDATE tasks
-        SET title = $1, description = $2, status = $3, updated_at = $4
-        WHERE id = $5`
+		UPDATE tasks
+		SET title = $1, description = $2, status = $3, updated_at = $4
+		WHERE id = $5`
 
 	t.UpdatedAt = time.Now()
 

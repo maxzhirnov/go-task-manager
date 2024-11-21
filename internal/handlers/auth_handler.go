@@ -11,11 +11,19 @@ import (
 )
 
 type AuthHandler struct {
-	DB database.DB
+	DB                   database.DB
+	GenerateJWT          func(userID int, username string) (string, error)
+	GenerateRefreshToken func(username string) (string, error)
+	ValidateRefreshToken func(token string) (*middleware.Claims, error)
 }
 
 func NewAuthHandler(db database.DB) *AuthHandler {
-	return &AuthHandler{DB: db}
+	return &AuthHandler{
+		DB:                   db,
+		GenerateJWT:          middleware.GenerateJWT,
+		GenerateRefreshToken: middleware.GenerateRefreshToken,
+		ValidateRefreshToken: middleware.ValidateRefreshToken,
+	}
 }
 
 // RegisterHandler registers a new user
@@ -77,14 +85,14 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate the access token
-	accessToken, err := middleware.GenerateJWT(user.ID, user.Username)
+	accessToken, err := h.GenerateJWT(user.ID, user.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate access token", http.StatusInternalServerError)
 		return
 	}
 
 	// Generate the refresh token
-	refreshToken, err := middleware.GenerateRefreshToken(user.Username)
+	refreshToken, err := h.GenerateRefreshToken(user.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		return
@@ -110,14 +118,14 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Validate the refresh token
-	claims, err := middleware.ValidateRefreshToken(req.RefreshToken)
+	claims, err := h.ValidateRefreshToken(req.RefreshToken)
 	if err != nil {
 		JSONError(w, "Invalid refresh token", http.StatusUnauthorized)
 		return
 	}
 
 	// Generate a new access token
-	accessToken, err := middleware.GenerateJWT(claims.UserID, claims.Username)
+	accessToken, err := h.GenerateJWT(claims.UserID, claims.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate access token", http.StatusInternalServerError)
 		return

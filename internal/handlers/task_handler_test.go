@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/mux"
+	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/maxzhirnov/go-task-manager/internal/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,7 +26,8 @@ func TestGetTasks(t *testing.T) {
 	// Mock the expected SQL query and result
 	mockRows := sqlmock.NewRows([]string{"id", "title", "description", "status", "created_at", "updated_at"}).
 		AddRow(1, "Test Task", "Test Description", "pending", time.Now(), time.Now())
-	mock.ExpectQuery("SELECT id, title, description, status, created_at, updated_at FROM tasks").
+	mock.ExpectQuery("SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE user_id = ?").
+		WithArgs(1). // Mocking for user_id = 1
 		WillReturnRows(mockRows)
 
 	// Initialize the handler
@@ -33,6 +36,11 @@ func TestGetTasks(t *testing.T) {
 	// Create a test request
 	req, err := http.NewRequest("GET", "/api/tasks", nil)
 	assert.NoError(t, err)
+
+	// Add a mock user_id to the context to simulate JWT claims
+	req = req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{
+		UserID: 1,
+	}))
 
 	// Create a response recorder
 	rr := httptest.NewRecorder()
@@ -75,6 +83,11 @@ func TestGetTask(t *testing.T) {
 	assert.NoError(t, err)
 	req = mux.SetURLVars(req, map[string]string{"id": "1"})
 
+	// Add a mock user_id to the context to simulate JWT claims
+	req = req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{
+		UserID: 1,
+	}))
+
 	// Create a response recorder
 	rr := httptest.NewRecorder()
 
@@ -102,7 +115,7 @@ func TestCreateTask(t *testing.T) {
 
 	// Mock the expected SQL query and result
 	mock.ExpectQuery("INSERT INTO tasks").
-		WithArgs("Test Task", "Test Description", "pending", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs("Test Task", "Test Description", "pending", 1, sqlmock.AnyArg(), sqlmock.AnyArg()). // Include user_id = 1
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	// Initialize the handler
@@ -122,6 +135,11 @@ func TestCreateTask(t *testing.T) {
 	// Create a test request
 	req, err := http.NewRequest("POST", "/api/tasks", bytes.NewBuffer(taskJSON))
 	assert.NoError(t, err)
+
+	// Add a mock user_id to the context to simulate JWT claims
+	req = req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{
+		UserID: 1,
+	}))
 
 	// Create a response recorder
 	rr := httptest.NewRecorder()
@@ -150,7 +168,7 @@ func TestUpdateTask(t *testing.T) {
 
 	// Mock the expected SQL query and result
 	mock.ExpectExec("UPDATE tasks").
-		WithArgs("Updated Task", "Updated Description", "completed", sqlmock.AnyArg(), 1).
+		WithArgs("Updated Task", "Updated Description", "completed", sqlmock.AnyArg(), 1). // Include updated_at timestamp
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// Initialize the handler

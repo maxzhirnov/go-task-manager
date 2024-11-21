@@ -70,7 +70,7 @@ func TestCreateTask(t *testing.T) {
 
 	// Mock the expected SQL query and result
 	mock.ExpectQuery("INSERT INTO tasks").
-		WithArgs("Test Task", "Test Description", "pending", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs("Test Task", "Test Description", "pending", 1, sqlmock.AnyArg(), sqlmock.AnyArg()). // Include user_id = 1
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	// Create test task
@@ -78,6 +78,7 @@ func TestCreateTask(t *testing.T) {
 		Title:       "Test Task",
 		Description: "Test Description",
 		Status:      "pending",
+		UserID:      1, // Set the user ID
 	}
 
 	// Call the CreateTask function

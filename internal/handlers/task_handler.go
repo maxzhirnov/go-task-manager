@@ -113,13 +113,14 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		JSONError(w, err.Error(), http.StatusBadRequest)
+		JSONError(w, "Invalid input data", http.StatusBadRequest)
 		return
 	}
 
-	task.ID = id
+	task.ID = id // Assign the ID from the request URL
+
 	if err := task.UpdateTask(h.DB); err != nil {
-		JSONError(w, err.Error(), http.StatusInternalServerError)
+		JSONError(w, "Failed to update task", http.StatusInternalServerError)
 		return
 	}
 

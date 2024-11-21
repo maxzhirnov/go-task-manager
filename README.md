@@ -1,121 +1,184 @@
-# Go Task Manager
+## **Task Manager**
 
-A robust task management system built with Go, demonstrating modern web development practices and Docker containerization. This project serves as a practical example of building a full-stack application using Go and PostgreSQL.
+A secure and user-friendly **Task Manager** application built with **Go** for the backend and a simple HTML/CSS/JavaScript frontend. This project demonstrates authentication with **JWT tokens** (including refresh tokens), user-specific tasks, and includes comprehensive test coverage.
 
-## Features
+---
 
-- RESTful API for task management
-- PostgreSQL database integration
-- Docker and Docker Compose setup for easy deployment
-- Simple and responsive web interface
-- Database initialization with sample data
-- Containerized development environment
+### **Features**
+1. **User Authentication**:
+   - Secure registration and login using hashed passwords (bcrypt).
+   - JWT-based authentication with access and refresh tokens.
 
-## Tech Stack
+2. **User-Specific Task Management**:
+   - Users can create, view, update, and delete their own tasks.
+   - Tasks are bound to user accounts, ensuring data privacy.
 
-- **Backend**: Go 1.20
-- **Database**: PostgreSQL 13
-- **Containerization**: Docker & Docker Compose
-- **API**: RESTful with Gorilla Mux
-- **Frontend**: HTML, CSS, JavaScript
+3. **Token Refresh Mechanism**:
+   - Automatic token renewal using refresh tokens for seamless user experience.
 
-## Prerequisites
+4. **Frontend**:
+   - Simple and clean UI for managing tasks.
+   - Dynamic task loading, creation, and deletion.
 
-- Docker and Docker Compose
-- Go 1.20 (for local development)
-- PostgreSQL (for local development)
+5. **Backend**:
+   - RESTful API built with **Go**.
+   - Database integration using PostgreSQL.
 
-## Quick Start
+6. **Dockerized Deployment**:
+   - Fully containerized for easy deployment with Docker and Docker Compose.
 
-1. Clone the repository:
+7. **Comprehensive Testing**:
+   - Unit tests for models, handlers, and middleware ensure reliability.
 
+---
+
+### **Technologies Used**
+- **Backend**:
+  - Go (Golang)
+  - Gorilla Mux (Router)
+  - bcrypt (Password hashing)
+  - jwt-go (JSON Web Tokens)
+- **Frontend**:
+  - HTML/CSS/JavaScript
+- **Database**:
+  - PostgreSQL
+- **Containerization**:
+  - Docker & Docker Compose
+- **Testing**:
+  - sqlmock (Mock database for testing)
+  - testify (Assertions in tests)
+
+---
+
+### **Getting Started**
+
+#### **Prerequisites**
+- Docker and Docker Compose installed on your machine.
+- Go (Golang) installed (optional for development).
+
+#### **Clone the Repository**
 ```bash
 git clone https://github.com/maxzhirnov/go-task-manager.git
 cd go-task-manager
 ```
 
-2. Start the application using Docker Compose:
+---
+
+### **Setup and Run the Application**
+
+#### **1. Run with Docker Compose**
+The easiest way to run the application is using Docker Compose. It will set up the backend, database, and serve the frontend.
 
 ```bash
 docker-compose up --build
 ```
 
-1. Access the application:
+- The backend will be available at: `http://localhost:8080`
+- The frontend can be accessed via the same address.
 
-- Web Interface: <http://localhost:8080>
-- API Endpoint: <http://localhost:8080/api/tasks>
+---
 
-## API Endpoints
+#### **2. Run Locally**
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tasks` | Retrieve all tasks |
-| GET | `/api/tasks/{id}` | Retrieve a specific task |
-| POST | `/api/tasks` | Create a new task |
-| PUT | `/api/tasks/{id}` | Update an existing task |
-| DELETE | `/api/tasks/{id}` | Delete a task |
+If you want to run the application locally without Docker:
 
-### Example API Request
+1. **Setup PostgreSQL**:
+   - Ensure PostgreSQL is running locally.
+   - Create a database named `taskmanager`.
+   - Run the SQL scripts in `scripts/db/init.sql` to set up the schema.
 
+2. **Set Environment Variables**:
+   Create a `.env` file or export the variables directly:
+   ```bash
+   export DB_HOST=localhost
+   export DB_PORT=5432
+   export DB_USER=postgres
+   export DB_PASSWORD=mysecretpassword
+   export DB_NAME=taskmanager
+   export PORT=8080
+   ```
+
+3. **Run the Backend**:
+   ```bash
+   go run cmd/api/main.go
+   ```
+
+4. **Serve the Frontend**:
+   Open the `web/index.html` file in your browser.
+
+---
+
+### **Endpoints**
+
+#### **Authentication**
+| Method | Endpoint         | Description                |
+|--------|------------------|----------------------------|
+| POST   | `/api/register`  | Register a new user        |
+| POST   | `/api/login`     | Login and get tokens       |
+| POST   | `/api/refresh`   | Get a new access token     |
+
+#### **Tasks**
+| Method | Endpoint         | Description                |
+|--------|------------------|----------------------------|
+| GET    | `/api/tasks`     | Get all tasks for a user   |
+| POST   | `/api/tasks`     | Create a new task          |
+| GET    | `/api/tasks/{id}`| Get details of a task      |
+| PUT    | `/api/tasks/{id}`| Update a specific task     |
+| DELETE | `/api/tasks/{id}`| Delete a specific task     |
+
+---
+
+### **Sample `.env` File**
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=mysecretpassword
+DB_NAME=taskmanager
+PORT=8080
+```
+
+---
+
+### **Testing**
+
+#### **Run Unit Tests**
 ```bash
-# Create a new task
-curl -X POST http://localhost:8080/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"New Task","description":"Task description","status":"pending"}'
+go test ./... -v
 ```
 
-## Project Structure
-
-```
-go-task-manager/
-├── cmd/
-│   └── api/            # Application entrypoint
-├── internal/
-│   ├── handlers/       # HTTP handlers
-│   ├── middleware/     # HTTP middleware
-│   └── models/         # Data models
-├── pkg/
-│   └── database/       # Database utilities
-├── scripts/
-│   └── db/            # Database initialization scripts
-├── web/               # Frontend assets
-└── docker-compose.yml # Docker composition
-```
-
-## Local Development
-
-1. Set up the environment variables:
-
+#### **Run with Coverage**
 ```bash
-export DB_HOST=localhost
-export DB_PORT=5432
-export DB_USER=postgres
-export DB_PASSWORD=mysecretpassword
-export DB_NAME=taskmanager
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
 ```
 
-2. Run the database:
+---
 
-```bash
-docker-compose up db
-```
+### **Screenshots**
 
-3. Run the application:
+#### **Login Page**
+Login Page
 
-```bash
-go run cmd/api/main.go
-```
+#### **Task Management Page**
+Task Management Page
 
-## Contributing
+---
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### **Roadmap**
+1. Add pagination for tasks.
+2. Implement role-based access control (e.g., admin vs. user).
+3. Add more comprehensive integration tests.
+4. Deploy the application to a cloud platform.
 
-## License
+---
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### **License**
 
-## Acknowledgments
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-- [Gorilla Mux](https://github.com/gorilla/mux) for HTTP routing
-- [PostgreSQL](https://www.postgresql.org/) for database
-- [Docker](https://www.docker.com/) for containerization
+---
+
+### **Contributing**
+
+Contributions are welcome! Please open an issue or submit a pull request to contribute to this project.

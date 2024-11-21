@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -22,7 +23,7 @@ func NewTaskHandler(db database.DB) *TaskHandler {
 func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	tasks, err := models.GetTasks(h.DB)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -34,16 +35,16 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		JSONError(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
 	task, err := models.GetTask(h.DB, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Task not found", http.StatusNotFound)
+			JSONError(w, "Task not found", http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			JSONError(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
@@ -55,6 +56,7 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		log.Printf("Error decoding task: %v", err) // Log the error
 		http.Error(w, `{"error": "Invalid input data"}`, http.StatusBadRequest)
 		return
 	}
@@ -69,6 +71,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := task.CreateTask(h.DB); err != nil {
+		log.Printf("Error creating task: %v", err) // Log the error
 		http.Error(w, `{"error": "Failed to create task"}`, http.StatusInternalServerError)
 		return
 	}
@@ -82,19 +85,19 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		JSONError(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
 	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	task.ID = id
 	if err := task.UpdateTask(h.DB); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -106,12 +109,12 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		JSONError(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
 	if err := models.DeleteTask(h.DB, id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

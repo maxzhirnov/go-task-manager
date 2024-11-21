@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"time"
 
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
@@ -51,8 +52,13 @@ func (t *Task) CreateTask(db database.DB) error {
 	t.CreatedAt = time.Now()
 	t.UpdatedAt = time.Now()
 
-	// Scan only the ID
-	return db.QueryRow(query, t.Title, t.Description, t.Status, t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
+	err := db.QueryRow(query, t.Title, t.Description, t.Status, t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
+	if err != nil {
+		log.Printf("Error inserting task into database: %v", err) // Log the error
+		return err
+	}
+
+	return nil
 }
 
 func (t *Task) UpdateTask(db database.DB) error {

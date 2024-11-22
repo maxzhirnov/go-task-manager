@@ -2,15 +2,19 @@ package handlers
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestRegisterHandler_Success(t *testing.T) {
@@ -96,66 +100,107 @@ func TestRegisterHandler_DuplicateUser(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-// func TestLoginHandler_Success(t *testing.T) {
-// 	// Initialize sqlmock
-// 	db, mock, err := sqlmock.New()
-// 	assert.NoError(t, err)
-// 	defer db.Close()
+// TestLoginHandler_Success
+func TestLoginHandler(t *testing.T) {
+	// Generate a real bcrypt hash for "password123"
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	assert.NoError(t, err)
 
-// 	// Mock the expected SQL query to retrieve a user
-// 	// Note: Using $1 instead of ? for PostgreSQL
-// 	mock.ExpectQuery(`SELECT id, username, password, created_at, updated_at FROM users WHERE username = \$1`).
-// 		WithArgs("testuser").
-// 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password", "created_at", "updated_at"}).
-// 			AddRow(1, "testuser", "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy", time.Now(), time.Now()))
+	tests := []struct {
+		name         string
+		payload      string
+		setupMock    func(mock sqlmock.Sqlmock)
+		expectedCode int
+		expectedBody map[string]string
+	}{
+		{
+			name:    "Successful login",
+			payload: `{"username": "testuser", "password": "password123"}`,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"id", "username", "password", "created_at", "updated_at"}).
+					AddRow(1, "testuser", string(hashedPassword), time.Now(), time.Now())
+				mock.ExpectQuery("SELECT (.+) FROM users WHERE username = \\$1").
+					WithArgs("testuser").
+					WillReturnRows(rows)
+			},
+			expectedCode: http.StatusOK,
+			expectedBody: map[string]string{
+				"access_token":  "mock-access-token",
+				"refresh_token": "mock-refresh-token",
+			},
+		},
+		{
+			name:         "Empty credentials",
+			payload:      `{"username": "", "password": ""}`,
+			setupMock:    func(mock sqlmock.Sqlmock) {},
+			expectedCode: http.StatusBadRequest,
+			expectedBody: map[string]string{
+				"error": "Username and password are required",
+			},
+		},
+		{
+			name:    "Invalid credentials",
+			payload: `{"username": "nonexistent", "password": "wrongpass"}`,
+			setupMock: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery("SELECT (.+) FROM users WHERE username = \\$1").
+					WithArgs("nonexistent").
+					WillReturnError(sql.ErrNoRows)
+			},
+			expectedCode: http.StatusUnauthorized,
+			expectedBody: map[string]string{
+				"error": "Invalid credentials",
+			},
+		},
+	}
 
-// 	// Initialize the handler with mock functions
-// 	authHandler := &AuthHandler{
-// 		DB: db,
-// 		GenerateJWT: func(userID int, username string) (string, error) {
-// 			return "mock-access-token", nil
-// 		},
-// 		GenerateRefreshToken: func(username string) (string, error) {
-// 			return "mock-refresh-token", nil
-// 		},
-// 		ValidateRefreshToken: func(token string) (*middleware.Claims, error) {
-// 			return &middleware.Claims{
-// 				UserID:   1,
-// 				Username: "testuser",
-// 			}, nil
-// 		},
-// 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Initialize sqlmock
+			db, mock, err := sqlmock.New()
+			assert.NoError(t, err)
+			defer db.Close()
 
-// 	// Create a test login payload
-// 	loginPayload := `{
-//         "username": "testuser",
-//         "password": "password123"
-//     }`
+			// Setup mock expectations
+			tt.setupMock(mock)
 
-// 	// Create a test request
-// 	req, err := http.NewRequest("POST", "/api/login", bytes.NewBufferString(loginPayload))
-// 	assert.NoError(t, err)
-// 	req.Header.Set("Content-Type", "application/json")
+			// Initialize handler with mock functions
+			authHandler := &AuthHandler{
+				DB: db,
+				GenerateJWT: func(userID int, username string) (string, error) {
+					return "mock-access-token", nil
+				},
+				GenerateRefreshToken: func(username string) (string, error) {
+					return "mock-refresh-token", nil
+				},
+			}
 
-// 	// Create a response recorder
-// 	rr := httptest.NewRecorder()
+			// Create request
+			req, err := http.NewRequest("POST", "/api/login", strings.NewReader(tt.payload))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
 
-// 	// Call the handler
-// 	authHandler.LoginHandler(rr, req)
+			// Create response recorder
+			rr := httptest.NewRecorder()
 
-// 	// Assert the status code
-// 	assert.Equal(t, http.StatusOK, rr.Code)
+			// Call the handler
+			authHandler.LoginHandler(rr, req)
 
-// 	// Assert the response body
-// 	var response map[string]string
-// 	err = json.Unmarshal(rr.Body.Bytes(), &response)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, "mock-access-token", response["access_token"])
-// 	assert.Equal(t, "mock-refresh-token", response["refresh_token"])
+			// Assert status code
+			assert.Equal(t, tt.expectedCode, rr.Code)
 
-// 	// Ensure all SQL expectations were met
-// 	assert.NoError(t, mock.ExpectationsWereMet())
-// }
+			// Parse response body
+			var response map[string]string
+			err = json.NewDecoder(rr.Body).Decode(&response)
+			assert.NoError(t, err)
+
+			// Assert response body
+			assert.Equal(t, tt.expectedBody, response)
+
+			// Verify that all expected mock queries were executed
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
 
 func TestRefreshTokenHandler_Success(t *testing.T) {
 	// Initialize sqlmock

@@ -35,12 +35,16 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Registering user with password: %s", user.Password)
+
 	// Hash the password
 	if err := user.HashPassword(); err != nil {
 		log.Printf("Error hashing password: %v", err)
 		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("Password hashed to: %s", user.Password)
 
 	// Log the hashed password for debugging
 	log.Printf("Hashed password for user %s: %s", user.Username, user.Password)
@@ -63,23 +67,43 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
 }
 
+// LoginRequest is a struct for the login request
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 // LoginHandler logs in a user
 func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	var req models.User
+	var req LoginRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Failed to decode login request: %v", err)
 		JSONError(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Login attempt for user: %s with password: %s", req.Username, req.Password)
+
+	// Check if password or username is empty FIRST
+	if req.Username == "" || req.Password == "" {
+		JSONError(w, "Username and password are required", http.StatusBadRequest)
 		return
 	}
 
 	// Get the user from the database
 	user, err := models.GetUserByUsername(h.DB, req.Username)
 	if err != nil {
+		log.Printf("Failed to get user by username: %v", err)
 		JSONError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
+	log.Printf("Retrieved user: %s, stored hash: %s", user.Username, user.Password)
+
 	// Check the password
 	if err := user.CheckPassword(req.Password); err != nil {
+		log.Printf("Password check failed: %v", err)
 		JSONError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}

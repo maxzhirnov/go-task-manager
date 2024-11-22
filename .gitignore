@@ -39,3 +39,4 @@ pgdata/
 # Other
 collect_source.go
 project_source.txt
+*.rest

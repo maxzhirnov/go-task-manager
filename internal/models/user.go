@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -13,7 +14,7 @@ import (
 type User struct {
 	ID        int       `json:"id"`
 	Username  string    `json:"username"`
-	Password  string    `json:"-"` // Don't expose the password
+	Password  string    `json:"password,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -30,11 +31,35 @@ func (u *User) HashPassword() error {
 
 // CheckPassword compares a plaintext password with the hashed password
 func (u *User) CheckPassword(password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	log.Printf("Attempting to compare:")
+	log.Printf("Stored hash: %s", u.Password)
+	log.Printf("Input password: %s", password)
+
+	if password == "" {
+		return fmt.Errorf("password cannot be empty")
+	}
+
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	if err != nil {
+		log.Printf("Password comparison failed: %v", err)
+	}
+	return err
 }
 
 // CreateUser inserts a new user into the database
 func (u *User) CreateUser(db database.DB) error {
+	// Check if username or password is empty
+	if u.Username == "" || u.Password == "" {
+		return fmt.Errorf("username and password are required")
+	}
+
+	// Check if password is hashed
+	if !strings.HasPrefix(u.Password, "$2a$") {
+		return fmt.Errorf("password must be hashed before saving")
+	}
+
+	log.Printf("Creating user with hash: %s", u.Password)
+
 	query := `
         INSERT INTO users (username, password, created_at, updated_at)
         VALUES ($1, $2, $3, $4)
@@ -62,5 +87,11 @@ func GetUserByUsername(db database.DB, username string) (User, error) {
 	var user User
 	query := `SELECT id, username, password, created_at, updated_at FROM users WHERE username = $1`
 	err := db.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt)
-	return user, err
+	if err != nil {
+		return user, err
+	}
+	if user.Password == "" {
+		return user, fmt.Errorf("invalid password hash")
+	}
+	return user, nil
 }

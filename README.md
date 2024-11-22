@@ -2,6 +2,13 @@
 
 A secure and user-friendly **Task Manager** application built with **Go** for the backend and a simple HTML/CSS/JavaScript frontend. This project demonstrates authentication with **JWT tokens** (including refresh tokens), user-specific tasks, and includes comprehensive test coverage.
 
+### **Live Demo**
+You can try out the application at: [https://todo.mzhirnov.com](https://todo.mzhirnov.com)
+
+#### Test Credentials
+- Username: `testuser`
+- Password: `123456`
+
 ---
 
 ### **Features**

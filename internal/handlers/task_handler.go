@@ -119,6 +119,11 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	task.ID = id // Assign the ID from the request URL
 
+	if err := task.ValidateStatus(); err != nil {
+		JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if err := task.UpdateTask(h.DB); err != nil {
 		JSONError(w, "Failed to update task", http.StatusInternalServerError)
 		return

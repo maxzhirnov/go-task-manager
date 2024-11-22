@@ -50,7 +50,9 @@
             gap: 10px;
             margin-top: 20px;
         }
-        .task-form input, .task-form textarea, .task-form button, .task-form select {
+        .task-form input,
+        .task-form textarea,
+        .task-form button {
             padding: 8px;
         }
         .task-form button {
@@ -79,20 +81,6 @@
             text-align: center;
             margin-bottom: 10px;
         }
-        .task-status {
-            padding: 5px;
-            margin-left: 10px;
-            border-radius: 3px;
-        }
-        .task-item.pending {
-            border-left: 4px solid #ffd700;
-        }
-        .task-item.in_progress {
-            border-left: 4px solid #1e90ff;
-        }
-        .task-item.completed {
-            border-left: 4px solid #32cd32;
-        }
     </style>
 </head>
 <body>
@@ -100,20 +88,12 @@
         <h1>Task Manager</h1>
         <button class="logout-btn" onclick="logout()">Logout</button>
     </header>
-
     <div id="error-message"></div>
-
     <form class="task-form" id="taskForm">
         <input type="text" id="title" placeholder="Task Title" required>
         <textarea id="description" placeholder="Task Description" required></textarea>
-        <select id="status" required>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-        </select>
         <button type="submit">Add Task</button>
     </form>
-
     <ul class="task-list" id="taskList"></ul>
 
     <script>
@@ -126,7 +106,7 @@
             window.location.href = "login.html";
         }
 
-        // Logout function
+        // Logout
         function logout() {
             localStorage.removeItem("jwt");
             localStorage.removeItem("refresh_token");
@@ -146,14 +126,14 @@
         }
 
         // Add a new task
-        async function addTask(title, description, status) {
+        async function addTask(title, description) {
             try {
                 const response = await fetchWithAuth(API_URL, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ title, description, status })
+                    body: JSON.stringify({ title, description, status: "pending" }),
                 });
                 if (!response.ok) throw new Error('Failed to create task');
                 fetchTasks(); // Refresh the task list
@@ -176,37 +156,27 @@
         }
 
         // Update Task Status
-        // Update Task Status
         async function updateTaskStatus(taskId, newStatus) {
             try {
-                // First, get the current task data
-                const response = await fetchWithAuth(`${API_URL}/${taskId}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch task');
-                }
-                const task = await response.json();
-
-                // Update the status while preserving other fields
-                const updateResponse = await fetchWithAuth(`${API_URL}/${taskId}`, {
+                const response = await fetch(`/api/tasks/${taskId}`, {
                     method: 'PUT',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('jwt')}`
                     },
                     body: JSON.stringify({
-                        title: task.title,
-                        description: task.description,
                         status: newStatus
                     })
                 });
-
-                if (!updateResponse.ok) {
+        
+                if (!response.ok) {
                     throw new Error('Failed to update task status');
                 }
-
-                // Refresh task list
-                fetchTasks();
+        
+                // Refresh task list or update UI
+                loadTasks();
             } catch (error) {
-                showError('Error updating task status: ' + error.message);
+                console.error('Error updating task status:', error);
             }
         }
 
@@ -216,15 +186,16 @@
             taskList.innerHTML = '';
             tasks.forEach(task => {
                 const li = document.createElement('li');
-                li.className = `task-item ${task.status}`;
+                li.className = 'task-item';
                 li.innerHTML = `
                     <div>
                         <h3>${task.title}</h3>
                         <p>${task.description}</p>
-                        <select class="task-status" onchange="updateTaskStatus(${task.id}, this.value)" value="${task.status}">
-                            <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Pending</option>
-                            <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
+                        <small>Status: ${task.status}</small>
+                        <select class="task-status" onchange="updateTaskStatus(this.dataset.taskId, this.value)">
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
                         </select>
                     </div>
                     <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
@@ -247,14 +218,14 @@
             e.preventDefault();
             const title = document.getElementById('title').value;
             const description = document.getElementById('description').value;
-            const status = document.getElementById('status').value;
-            await addTask(title, description, status);
+            await addTask(title, description);
             document.getElementById('taskForm').reset();
         });
 
         // Fetch tasks with authorization
         async function fetchWithAuth(url, options = {}) {
             let jwtToken = localStorage.getItem("jwt");
+
             if (!jwtToken) {
                 window.location.href = "login.html";
                 return;
@@ -262,7 +233,7 @@
 
             options.headers = {
                 ...options.headers,
-                "Authorization": `Bearer ${jwtToken}`
+                "Authorization": `Bearer ${jwtToken}`,
             };
 
             let response = await fetch(url, options);
@@ -272,7 +243,7 @@
                 jwtToken = await refreshTokenRequest();
                 if (!jwtToken) return; // If refreshing fails, stop here
 
-                options.headers["Authorization"] = `Bearer ${jwtToken}`;
+                options.headers["Authorization"] = `Bearer ${jwtToken}`; // Update token
                 response = await fetch(url, options); // Retry the request
             }
 
@@ -289,20 +260,18 @@
             try {
                 const response = await fetch("/api/refresh", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ refresh_token: refreshToken })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken }),
                 });
 
                 if (!response.ok) throw new Error("Failed to refresh token");
 
                 const { access_token } = await response.json();
-                localStorage.setItem("jwt", access_token);
+                localStorage.setItem("jwt", access_token); // Update the access token
                 return access_token;
             } catch (error) {
                 console.error("Error refreshing token:", error.message);
-                logout();
+                logout(); // Log out the user if the refresh fails
                 return null;
             }
         }

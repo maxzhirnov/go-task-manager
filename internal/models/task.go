@@ -1,11 +1,20 @@
 package models
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
 )
+
+const (
+	StatusPending    = "pending"
+	StatusInProgress = "in_progress"
+	StatusCompleted  = "completed"
+)
+
+var ValidStatuses = []string{StatusPending, StatusInProgress, StatusCompleted}
 
 type Task struct {
 	ID          int       `json:"id"`
@@ -72,6 +81,15 @@ func (t *Task) UpdateTask(db database.DB) error {
 
 	_, err := db.Exec(query, t.Title, t.Description, t.Status, t.UpdatedAt, t.ID)
 	return err
+}
+
+func (t *Task) ValidateStatus() error {
+	for _, status := range ValidStatuses {
+		if t.Status == status {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid status: %s", t.Status)
 }
 
 func DeleteTask(db database.DB, id int) error {

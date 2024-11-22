@@ -31,7 +31,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		log.Printf("Error decoding input: %v", err)
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		JSONError(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
@@ -40,14 +40,11 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// Hash the password
 	if err := user.HashPassword(); err != nil {
 		log.Printf("Error hashing password: %v", err)
-		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+		JSONError(w, "Failed to hash password", http.StatusInternalServerError)
 		return
 	}
 
 	log.Printf("Password hashed to: %s", user.Password)
-
-	// Log the hashed password for debugging
-	log.Printf("Hashed password for user %s: %s", user.Username, user.Password)
 
 	// Create the user
 	if err := user.CreateUser(h.DB); err != nil {
@@ -55,14 +52,16 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Check for duplicate username error
 		if err.Error() == "username already exists" {
-			http.Error(w, "Username already exists", http.StatusConflict)
+			log.Printf("Username already exists")
+			JSONError(w, "Username already exists", http.StatusConflict)
 			return
 		}
 
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		JSONError(w, "Failed to create user", http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
 }

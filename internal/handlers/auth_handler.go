@@ -13,7 +13,7 @@ import (
 type AuthHandler struct {
 	DB                   database.DB
 	GenerateJWT          func(userID int, username string) (string, error)
-	GenerateRefreshToken func(username string) (string, error)
+	GenerateRefreshToken func(userID int, username string) (string, error)
 	ValidateRefreshToken func(token string) (*middleware.Claims, error)
 }
 
@@ -115,7 +115,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate the refresh token
-	refreshToken, err := h.GenerateRefreshToken(user.Username)
+	refreshToken, err := h.GenerateRefreshToken(user.ID, user.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		return

@@ -48,11 +48,13 @@ func TestGenerateJWT(t *testing.T) {
 func TestGenerateAndValidateRefreshToken(t *testing.T) {
 	tests := []struct {
 		name     string
+		userID   int
 		username string
 		wantErr  bool
 	}{
 		{
 			name:     "Valid refresh token generation",
+			userID:   1,
 			username: "testuser",
 			wantErr:  false,
 		},
@@ -60,7 +62,7 @@ func TestGenerateAndValidateRefreshToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, err := GenerateRefreshToken(tt.username)
+			token, err := GenerateRefreshToken(tt.userID, tt.username)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Empty(t, token)
@@ -71,6 +73,7 @@ func TestGenerateAndValidateRefreshToken(t *testing.T) {
 				// Validate the generated refresh token
 				claims, err := ValidateRefreshToken(token)
 				assert.NoError(t, err)
+				assert.Equal(t, tt.userID, claims.UserID)
 				assert.Equal(t, tt.username, claims.Username)
 			}
 		})
@@ -140,7 +143,6 @@ func TestJWTAuthMiddleware(t *testing.T) {
 }
 
 func TestTokenExpiration(t *testing.T) {
-	// Generate a token that expires in 1 second
 	claims := &Claims{
 		UserID:   1,
 		Username: "testuser",
@@ -152,10 +154,16 @@ func TestTokenExpiration(t *testing.T) {
 	tokenString, err := token.SignedString(jwtSecret)
 	assert.NoError(t, err)
 
-	// Wait for token to expire
+	// Проверяем что токен валиден сразу после создания
+	validClaims, err := ValidateJWT(tokenString)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, validClaims.UserID)
+	assert.Equal(t, "testuser", validClaims.Username)
+
+	// Ждем истечения токена
 	time.Sleep(2 * time.Second)
 
-	// Try to validate expired token
+	// Проверяем что токен истек
 	_, err = ValidateJWT(tokenString)
 	assert.Error(t, err)
 }

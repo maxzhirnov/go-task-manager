@@ -169,7 +169,7 @@ func TestLoginHandler(t *testing.T) {
 				GenerateJWT: func(userID int, username string) (string, error) {
 					return "mock-access-token", nil
 				},
-				GenerateRefreshToken: func(username string) (string, error) {
+				GenerateRefreshToken: func(userID int, username string) (string, error) {
 					return "mock-refresh-token", nil
 				},
 			}

@@ -35,9 +35,10 @@ func GenerateJWT(userID int, username string) (string, error) {
 }
 
 // GenerateRefreshToken generates a new refresh token
-func GenerateRefreshToken(username string) (string, error) {
+func GenerateRefreshToken(userID int, username string) (string, error) {
 	expirationTime := time.Now().Add(7 * 24 * time.Hour) // Refresh token expires in 7 days
 	claims := &Claims{
+		UserID:   userID,
 		Username: username,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),

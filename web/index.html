@@ -17,16 +17,35 @@
             align-items: center;
             padding: 10px 0;
         }
-        h1 {
-            text-align: left;
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0px;
+            gap: 20px;
+            width: 100%;
         }
+        
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            white-space: nowrap;
+        }
+        
         .logout-btn {
             background-color: #f44336;
             color: white;
             border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
+            padding: 8px 16px;
+            border-radius: 4px;
             cursor: pointer;
+            font-size: 14px;
         }
         .logout-btn:hover {
             background-color: #da190b;
@@ -93,6 +112,32 @@
         .task-item.completed {
             border-left: 4px solid #32cd32;
         }
+        @media screen and (max-width: 600px) {
+            h1 {
+                order: 2;
+            }
+            header {
+                padding: 0;
+            }
+            .header-container {
+                padding-top: 0px;
+                flex-direction: column;
+                text-align: center;
+            }
+        
+            .user-info {
+                order: 1;
+                flex-direction: row;
+                width: 100%;
+                justify-content: space-between;
+                gap: 10px;
+            }
+        
+            .logout-btn {
+                width: 100px;
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -139,10 +184,12 @@
 
         const username = getUsernameFromToken(localStorage.getItem("jwt"));
         document.querySelector('header').innerHTML = `
-            <h1>Task Manager</h1>
-            <div>
-                <span>Welcome, ${username}</span>
-                <button class="logout-btn" onclick="logout()">Logout</button>
+            <div class="header-container">
+                <h1>Task Manager</h1>
+                <div class="user-info">
+                    <span>Welcome, ${username}</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
             </div>
         `;
 

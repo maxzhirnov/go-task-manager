@@ -121,6 +121,22 @@
         .task-item div select {
             margin: 0px;
         }
+        .hidden {
+            display: none;
+        }
+        
+        .show-form-btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .show-form-btn:hover {
+            background-color: #45a049;
+        }
         @media screen and (max-width: 600px) {
             h1 {
                 order: 2;
@@ -146,6 +162,10 @@
                 width: 100px;
                 padding: 10px;
             }
+
+            .task-creation-container {
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -154,16 +174,19 @@
 
     <div id="error-message"></div>
 
-    <form class="task-form" id="taskForm">
-        <input type="text" id="title" placeholder="Task Title" required>
-        <textarea id="description" placeholder="Task Description" required></textarea>
-        <select id="status" required>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-        </select>
-        <button type="submit">Add Task</button>
-    </form>
+    <div class="task-creation-container">
+        <button id="showFormBtn" class="show-form-btn">Create Task</button>
+        <form class="task-form hidden" id="taskForm">
+            <input type="text" id="title" placeholder="Task Title" required>
+            <textarea id="description" placeholder="Task Description" required></textarea>
+            <select id="status" required>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+            </select>
+            <button type="submit">Add Task</button>
+        </form>
+    </div>
 
     <ul class="task-list" id="taskList"></ul>
 
@@ -297,15 +320,6 @@
             }, 3000);
         }
 
-        // Handle form submission
-        document.getElementById('taskForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const title = document.getElementById('title').value;
-            const description = document.getElementById('description').value;
-            const status = document.getElementById('status').value;
-            await addTask(title, description, status);
-            document.getElementById('taskForm').reset();
-        });
 
         // Fetch tasks with authorization
         async function fetchWithAuth(url, options = {}) {
@@ -396,6 +410,36 @@
                 throw error;
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const taskForm = document.getElementById('taskForm');
+            const showFormBtn = document.getElementById('showFormBtn');
+        
+            // Показать форму при клике на кнопку
+            showFormBtn.addEventListener('click', function() {
+                taskForm.classList.remove('hidden');
+                showFormBtn.classList.add('hidden');
+            });
+        
+            // Обработка отправки формы
+            taskForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Получение данных формы
+                const title = document.getElementById('title').value;
+                const description = document.getElementById('description').value;
+                const status = document.getElementById('status').value;
+        
+                // Отправка данных
+                await addTask(title, description, status);
+        
+                // Сброс и скрытие формы
+                taskForm.reset();
+                taskForm.classList.add('hidden');
+                showFormBtn.textContent = 'Create One More';
+                showFormBtn.classList.remove('hidden');
+            });
+        });
 
         // Load tasks on page load
         fetchTasks();

@@ -126,6 +126,26 @@
             window.location.href = "login.html";
         }
 
+        // Get username from JWT token
+        function getUsernameFromToken(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+        
+            return JSON.parse(jsonPayload).username;
+        }
+
+        const username = getUsernameFromToken(localStorage.getItem("jwt"));
+        document.querySelector('header').innerHTML = `
+            <h1>Task Manager</h1>
+            <div>
+                <span>Welcome, ${username}</span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        `;
+
         // Logout function
         function logout() {
             localStorage.removeItem("jwt");

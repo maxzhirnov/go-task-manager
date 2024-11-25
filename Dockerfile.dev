@@ -1,0 +1,14 @@
+FROM golang:1.23-alpine
+
+WORKDIR /app
+
+# Установка Air
+RUN go install github.com/air-verse/air@latest
+
+# Копирование конфигурации Air
+COPY .air.toml ./
+
+# Запуск через Air с включенным polling
+ENV AIR_FORCE_POLL=true
+
+CMD ["air", "-c", ".air.toml"]

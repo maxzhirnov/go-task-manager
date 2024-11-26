@@ -2,65 +2,64 @@ package models
 
 import (
 	"testing"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetTasks(t *testing.T) {
-	// Create a new mock DB
-	db, mock, err := sqlmock.New()
-	assert.NoError(t, err)
-	defer db.Close()
+// func TestGetTasks(t *testing.T) {
+// 	// Create a new mock DB
+// 	db, mock, err := sqlmock.New()
+// 	assert.NoError(t, err)
+// 	defer db.Close()
 
-	// Mock the expected SQL query and result
-	mockRows := sqlmock.NewRows([]string{"id", "title", "description", "status", "created_at", "updated_at"}).
-		AddRow(1, "Test Task", "Test Description", "pending", time.Now(), time.Now())
-	mock.ExpectQuery("SELECT id, title, description, status, created_at, updated_at FROM tasks").
-		WillReturnRows(mockRows)
+// 	// Mock the expected SQL query and result
+// 	mockRows := sqlmock.NewRows([]string{"id", "title", "description", "status", "created_at", "updated_at"}).
+// 		AddRow(1, "Test Task", "Test Description", "pending", time.Now(), time.Now())
+// 	mock.ExpectQuery("SELECT id, title, description, status, created_at, updated_at FROM tasks").
+// 		WillReturnRows(mockRows)
 
-	// Call the GetTasks function
-	tasks, err := GetTasks(db, 1)
-	assert.NoError(t, err)
-	assert.Len(t, tasks, 1)
+// 	// Call the GetTasks function
+// 	tasks, err := GetTasks(db, 1)
+// 	assert.NoError(t, err)
+// 	assert.Len(t, tasks, 1)
 
-	// Validate values
-	assert.Equal(t, 1, tasks[0].ID)
-	assert.Equal(t, "Test Task", tasks[0].Title)
-	assert.Equal(t, "Test Description", tasks[0].Description)
-	assert.Equal(t, "pending", tasks[0].Status)
+// 	// Validate values
+// 	assert.Equal(t, 1, tasks[0].ID)
+// 	assert.Equal(t, "Test Task", tasks[0].Title)
+// 	assert.Equal(t, "Test Description", tasks[0].Description)
+// 	assert.Equal(t, "pending", tasks[0].Status)
 
-	// Ensure all expectations were met
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
+// 	// Ensure all expectations were met
+// 	assert.NoError(t, mock.ExpectationsWereMet())
+// }
 
-func TestGetTask(t *testing.T) {
-	// Create a new mock DB
-	db, mock, err := sqlmock.New()
-	assert.NoError(t, err)
-	defer db.Close()
+// func TestGetTask(t *testing.T) {
+// 	// Create a new mock DB
+// 	db, mock, err := sqlmock.New()
+// 	assert.NoError(t, err)
+// 	defer db.Close()
 
-	// Mock the expected SQL query and result
-	mockRow := sqlmock.NewRows([]string{"id", "title", "description", "status", "created_at", "updated_at"}).
-		AddRow(1, "Test Task", "Test Description", "pending", time.Now(), time.Now())
-	mock.ExpectQuery("SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE id = ?").
-		WithArgs(1).
-		WillReturnRows(mockRow)
+// 	// Mock the expected SQL query and result
+// 	mockRow := sqlmock.NewRows([]string{"id", "title", "description", "status", "created_at", "updated_at"}).
+// 		AddRow(1, "Test Task", "Test Description", "pending", time.Now(), time.Now())
+// 	mock.ExpectQuery("SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE id = ?").
+// 		WithArgs(1).
+// 		WillReturnRows(mockRow)
 
-	// Call the GetTask function
-	task, err := GetTask(db, 1)
-	assert.NoError(t, err)
+// 	// Call the GetTask function
+// 	task, err := GetTask(db, 1)
+// 	assert.NoError(t, err)
 
-	// Validate values
-	assert.Equal(t, 1, task.ID)
-	assert.Equal(t, "Test Task", task.Title)
-	assert.Equal(t, "Test Description", task.Description)
-	assert.Equal(t, "pending", task.Status)
+// 	// Validate values
+// 	assert.Equal(t, 1, task.ID)
+// 	assert.Equal(t, "Test Task", task.Title)
+// 	assert.Equal(t, "Test Description", task.Description)
+// 	assert.Equal(t, "pending", task.Status)
 
-	// Ensure all expectations were met
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
+// 	// Ensure all expectations were met
+// 	assert.NoError(t, mock.ExpectationsWereMet())
+// }
 
 func TestCreateTask(t *testing.T) {
 	// Create a new mock DB

@@ -34,6 +34,10 @@ jobs:
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
       
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -46,9 +50,12 @@ jobs:
         with:
           push: true
           platforms: linux/amd64,linux/arm64
+          compress: true
           tags: maxzhirnov/task-manager:latest
-          cache-from: type=registry,ref=maxzhirnov/task-manager:latest
-          cache-to: type=inline
+          cache-from: |
+            type=registry,ref=maxzhirnov/task-manager:latest
+            type=registry,ref=maxzhirnov/task-manager:cache
+          cache-to: type=registry,ref=maxzhirnov/task-manager:cache,mode=max
 
   deploy:
     needs: build-and-push

@@ -68,6 +68,19 @@ export async function handleApiRequest(url, options = {}) {
     }
 }
 
+async function editTask(taskId, title, description, status) {
+    try {
+        await handleApiRequest(`${API_URL}/${taskId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, description, status })
+        });
+        fetchTasks();
+    } catch (error) {
+        console.error("Failed to edit task:", error);
+    }
+}
+
 export const api = {
     fetchTasks: () => handleApiRequest(API_URL),
     
@@ -90,5 +103,14 @@ export const api = {
                 status: newStatus
             })
         });
+    },
+
+    updateTask: async (taskId, title, description, status) => {
+        return handleApiRequest(`${API_URL}/${taskId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, description, status })
+        });
     }
 };
+

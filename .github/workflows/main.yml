@@ -50,7 +50,6 @@ jobs:
         with:
           push: true
           platforms: linux/amd64,linux/arm64
-          compress: true
           tags: maxzhirnov/task-manager:latest
           cache-from: |
             type=registry,ref=maxzhirnov/task-manager:latest

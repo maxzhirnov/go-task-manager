@@ -9,8 +9,10 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -158,6 +160,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} models.ErrorResponse "Internal Server Error"
 // @Router /tasks/{id} [put]
 func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received task update request")
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -212,4 +215,41 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *TaskHandler) UpdateTaskPositions(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received positions update request")
+	body, _ := io.ReadAll(r.Body)
+	log.Printf("Received positions update request body: %s", string(body))
+	r.Body = io.NopCloser(bytes.NewBuffer(body))
+
+	claims := r.Context().Value("claims").(*middleware.Claims)
+	userID := claims.UserID
+
+	var positions map[int]int
+	if err := json.NewDecoder(r.Body).Decode(&positions); err != nil {
+		log.Printf("Error decoding positions: %v", err)
+		JSONError(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Parsed positions map: %+v", positions)
+
+	for taskID, newPosition := range positions {
+		// Get the task first
+		task, err := models.GetTask(h.DB, taskID)
+		if err != nil {
+			JSONError(w, "Task not found", http.StatusNotFound)
+			return
+		}
+
+		// Update the task's position
+		if err := task.UpdateTaskPosition(h.DB, userID, newPosition); err != nil {
+			JSONError(w, "Failed to update position", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Positions updated successfully"})
 }

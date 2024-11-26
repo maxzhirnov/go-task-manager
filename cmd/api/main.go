@@ -42,6 +42,7 @@ func setupRouter() *mux.Router {
 	api.HandleFunc("/tasks", taskHandler.GetTasks).Methods("GET")
 	api.HandleFunc("/tasks", taskHandler.CreateTask).Methods("POST")
 	api.HandleFunc("/tasks/{id}", taskHandler.GetTask).Methods("GET")
+	api.HandleFunc("/tasks/positions", taskHandler.UpdateTaskPositions).Methods("PUT")
 	api.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods("PUT")
 	api.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
 

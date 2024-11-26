@@ -24,10 +24,14 @@ type Task struct {
 	UserID      int       `json:"user_id"` // Associate task with a user
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	Position    int       `json:"position"`
 }
 
 func GetTasks(db database.DB, userID int) ([]Task, error) {
-	query := `SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE user_id = $1 ORDER BY created_at DESC`
+	query := `SELECT id, title, description, status, user_id, position, created_at, updated_at 
+              FROM tasks 
+              WHERE user_id = $1 
+              ORDER BY position ASC`
 	rows, err := db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -37,7 +41,8 @@ func GetTasks(db database.DB, userID int) ([]Task, error) {
 	var tasks []Task
 	for rows.Next() {
 		var t Task
-		err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+		err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status,
+			&t.UserID, &t.Position, &t.CreatedAt, &t.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -48,8 +53,11 @@ func GetTasks(db database.DB, userID int) ([]Task, error) {
 
 func GetTask(db database.DB, id int) (Task, error) {
 	var t Task
-	query := `SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE id = $1`
-	err := db.QueryRow(query, id).Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+	query := `SELECT id, title, description, status, user_id, position, created_at, updated_at 
+              FROM tasks 
+              WHERE id = $1`
+	err := db.QueryRow(query, id).Scan(&t.ID, &t.Title, &t.Description, &t.Status,
+		&t.UserID, &t.Position, &t.CreatedAt, &t.UpdatedAt)
 	return t, err
 }
 
@@ -81,6 +89,63 @@ func (t *Task) UpdateTask(db database.DB) error {
 
 	_, err := db.Exec(query, t.Title, t.Description, t.Status, t.UpdatedAt, t.ID)
 	return err
+}
+
+func (t *Task) UpdateTaskPosition(db database.DB, userID int, newPosition int) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Get current position
+	var oldPosition int
+	err = tx.QueryRow(`
+        SELECT position 
+        FROM tasks 
+        WHERE id = $1 AND user_id = $2`, t.ID, userID).Scan(&oldPosition)
+	if err != nil {
+		return err
+	}
+
+	// Update positions of other tasks
+	if oldPosition < newPosition {
+		_, err = tx.Exec(`
+            UPDATE tasks 
+            SET position = position - 1,
+                updated_at = $1
+            WHERE user_id = $2 
+            AND position > $3 
+            AND position <= $4`,
+			time.Now(), userID, oldPosition, newPosition)
+	} else {
+		_, err = tx.Exec(`
+            UPDATE tasks 
+            SET position = position + 1,
+                updated_at = $1
+            WHERE user_id = $2 
+            AND position >= $3 
+            AND position < $4`,
+			time.Now(), userID, newPosition, oldPosition)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Update position of the current task
+	t.Position = newPosition
+	t.UpdatedAt = time.Now()
+	_, err = tx.Exec(`
+        UPDATE tasks 
+        SET position = $1,
+            updated_at = $2
+        WHERE id = $3 AND user_id = $4`,
+		t.Position, t.UpdatedAt, t.ID, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (t *Task) ValidateStatus() error {

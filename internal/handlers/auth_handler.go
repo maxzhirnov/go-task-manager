@@ -1,3 +1,11 @@
+// @title Task Manager API
+// @version 1.0
+// @description Task management system with JWT authentication
+// @host localhost:8080
+// @BasePath /api
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package handlers
 
 import (
@@ -26,7 +34,17 @@ func NewAuthHandler(db database.DB) *AuthHandler {
 	}
 }
 
-// RegisterHandler registers a new user
+// @Summary Register new user
+// @Description Register a new user in the system
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User registration details"
+// @Success 201 {object} map[string]string "User registered successfully"
+// @Failure 400 {object} models.ErrorResponse "Invalid input"
+// @Failure 409 {object} models.ErrorResponse "Username already exists"
+// @Failure 500 {object} models.ErrorResponse "Internal server error"
+// @Router /register [post]
 func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -66,13 +84,29 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
 }
 
-// LoginRequest is a struct for the login request
+// LoginRequest represents the login request payload
+// @Description Login request structure
 type LoginRequest struct {
+	// Username for authentication
+	// @example "john_doe"
 	Username string `json:"username"`
+
+	// Password for authentication
+	// @example "secretpassword123"
 	Password string `json:"password"`
 }
 
-// LoginHandler logs in a user
+// @Summary Login user
+// @Description Authenticate user and return access and refresh tokens
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentials body LoginRequest true "User credentials"
+// @Success 200 {object} map[string]string "Returns access_token and refresh_token"
+// @Failure 400 {object} models.ErrorResponse "Invalid input"
+// @Failure 401 {object} models.ErrorResponse "Invalid credentials"
+// @Failure 500 {object} models.ErrorResponse "Internal server error"
+// @Router /login [post]
 func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 
@@ -129,6 +163,17 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Refresh access token
+// @Description Get new access token using refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param refresh_token body map[string]string true "Refresh token"
+// @Success 200 {object} map[string]string "Returns new access_token"
+// @Failure 400 {object} models.ErrorResponse "Invalid input"
+// @Failure 401 {object} models.ErrorResponse "Invalid refresh token"
+// @Failure 500 {object} models.ErrorResponse "Internal server error"
+// @Router /refresh [post]
 func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`

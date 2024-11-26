@@ -1,3 +1,11 @@
+// @title Task Manager API
+// @version 1.0
+// @description Task management system with JWT authentication
+// @host localhost:8080
+// @BasePath /api
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -6,9 +14,11 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	_ "github.com/maxzhirnov/go-task-manager/docs"
 	"github.com/maxzhirnov/go-task-manager/internal/handlers"
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func setupRouter() *mux.Router {
@@ -34,6 +44,12 @@ func setupRouter() *mux.Router {
 	api.HandleFunc("/tasks/{id}", taskHandler.GetTask).Methods("GET")
 	api.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods("PUT")
 	api.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
+
+	// Swagger documentation
+	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+		httpSwagger.DeepLinking(true),
+	))
 
 	// r.PathPrefix("/").Handler(http.FileServer(http.Dir("./web")))
 

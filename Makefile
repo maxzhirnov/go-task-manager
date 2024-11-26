@@ -5,3 +5,6 @@ dev:
 
 prod:
 	docker-compose up -d --build
+
+swagger:
+	swag init --parseDependency --parseInternal -g cmd/api/main.go

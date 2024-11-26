@@ -1,3 +1,11 @@
+// @title Task Manager API
+// @version 1.0
+// @description Task management system with JWT authentication
+// @host localhost:8080
+// @BasePath /api
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package handlers
 
 import (
@@ -21,6 +29,16 @@ func NewTaskHandler(db database.DB) *TaskHandler {
 	return &TaskHandler{DB: db}
 }
 
+// @Summary Get all tasks
+// @Description Get all tasks for the authenticated user
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Task
+// @Failure 401 {object} models.ErrorResponse "Unauthorized"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /tasks [get]
 func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	// Get the user_id from the JWT claims
 	claims, ok := r.Context().Value("claims").(*middleware.Claims)
@@ -45,6 +63,18 @@ func (h *TaskHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tasks)
 }
 
+// @Summary Get a task
+// @Description Get a specific task by ID
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param id path int true "Task ID"
+// @Security BearerAuth
+// @Success 200 {object} models.Task
+// @Failure 400 {object} models.ErrorResponse "Invalid task ID"
+// @Failure 404 {object} models.ErrorResponse "Task not found"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /tasks/{id} [get]
 func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -67,6 +97,18 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(task)
 }
 
+// @Summary Create a task
+// @Description Create a new task for the authenticated user
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param task body models.Task true "Task object"
+// @Security BearerAuth
+// @Success 201 {object} models.Task
+// @Failure 400 {object} models.ErrorResponse "Invalid input data"
+// @Failure 401 {object} models.ErrorResponse "Unauthorized"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /tasks [post]
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
@@ -103,6 +145,18 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(task)
 }
 
+// @Summary Update a task
+// @Description Update an existing task
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param id path int true "Task ID"
+// @Param task body models.Task true "Task object"
+// @Security BearerAuth
+// @Success 200 {object} models.Task
+// @Failure 400 {object} models.ErrorResponse "Invalid input data"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /tasks/{id} [put]
 func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -133,6 +187,17 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(task)
 }
 
+// @Summary Delete a task
+// @Description Delete a task by ID
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param id path int true "Task ID"
+// @Security BearerAuth
+// @Success 204 "No Content"
+// @Failure 400 {object} models.ErrorResponse "Invalid task ID"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /tasks/{id} [delete]
 func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])

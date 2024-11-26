@@ -24,7 +24,6 @@
   });
 </script>
 
-<ErrorMessage />
 <Header />
 <TaskForm />
 <TaskList />

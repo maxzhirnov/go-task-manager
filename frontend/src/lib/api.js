@@ -111,6 +111,16 @@ export const api = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title, description, status })
         });
+    },
+
+    updateTaskPositions: async (positions) => {
+        // console.log('Sending positions update:', positions);
+        // console.log('Request URL:', `${API_URL}/positions`);
+        return handleApiRequest(`${API_URL}/positions`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(positions)
+        });
     }
 };
 

@@ -4,14 +4,26 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 )
 
-var jwtSecret = []byte("your_secret_key")                // Need to be replaced with secure key from env in production
-var jwtRefreshSecret = []byte("your_refresh_secret_key") // Separate key for refresh tokens
+var (
+	// Load JWT secrets from environment variables with defaults
+	jwtSecret        = []byte(getEnvWithDefault("JWT_SECRET", "default_secret_key_please_change_in_production"))
+	jwtRefreshSecret = []byte(getEnvWithDefault("JWT_REFRESH_SECRET", "default_refresh_secret_key_please_change_in_production"))
+)
+
+// getEnvWithDefault returns environment variable value or default if not set
+func getEnvWithDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
 
 // Claims represents the JWT claims
 type Claims struct {

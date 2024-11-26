@@ -1,0 +1,33 @@
+# Frontend ignores
+frontend/node_modules
+frontend/.svelte-kit
+frontend/build
+frontend/.env*
+frontend/coverage
+frontend/.vscode
+frontend/npm-debug.log*
+
+# Go ignores
+tmp/
+*.exe
+*.test
+*.prof
+*.out
+coverage.out
+
+# Git and IDE
+.git
+.gitignore
+.github
+.idea
+.vscode
+
+# Docker
+Dockerfile*
+docker-compose*
+.docker
+
+# Misc
+README.md
+*.md
+.DS_Store

@@ -35,7 +35,16 @@ func setupRouter() *mux.Router {
 	api.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods("PUT")
 	api.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
 
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./web")))
+	// r.PathPrefix("/").Handler(http.FileServer(http.Dir("./web")))
+
+	// Static files for Svelte assets (CSS, JS)
+	r.PathPrefix("/_app/").Handler(http.FileServer(http.Dir("./frontend/build")))
+	r.PathPrefix("/assets/").Handler(http.FileServer(http.Dir("./frontend/build")))
+
+	// SPA fallback - must be last
+	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/build/index.html")
+	})
 
 	return r
 }

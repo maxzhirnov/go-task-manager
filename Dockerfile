@@ -1,20 +1,25 @@
-# Build stage
-FROM golang:1.20-alpine AS builder
+# Frontend build stage
+FROM node:18-alpine AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend .
+RUN npm run build
+
+# Go build stage
+FROM golang:1.20-alpine AS backend-builder
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-
-# Build binary for both architectures
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o main-amd64 ./cmd/api
 RUN GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o main-arm64 ./cmd/api
 
 # Final stage
 FROM alpine:latest
 WORKDIR /app
-# Copy binaries and web directory
-COPY --from=builder /build/main-* ./
-COPY web ./web
+COPY --from=backend-builder /build/main-* ./
+COPY --from=frontend-builder /frontend/build ./frontend/build
 
 # Create entrypoint script
 RUN echo '#!/bin/sh' > /entrypoint.sh && \

@@ -63,13 +63,13 @@
 				
 				<option value="file3">github.com/maxzhirnov/go-task-manager/internal/handlers/auth_handler.go (63.6%)</option>
 				
-				<option value="file4">github.com/maxzhirnov/go-task-manager/internal/handlers/task_handler.go (97.9%)</option>
+				<option value="file4">github.com/maxzhirnov/go-task-manager/internal/handlers/task_handler.go (77.4%)</option>
 				
 				<option value="file5">github.com/maxzhirnov/go-task-manager/internal/handlers/utils.go (100.0%)</option>
 				
 				<option value="file6">github.com/maxzhirnov/go-task-manager/internal/middleware/jwt.go (90.0%)</option>
 				
-				<option value="file7">github.com/maxzhirnov/go-task-manager/internal/models/task.go (91.9%)</option>
+				<option value="file7">github.com/maxzhirnov/go-task-manager/internal/models/task.go (95.7%)</option>
 				
 				<option value="file8">github.com/maxzhirnov/go-task-manager/internal/models/user.go (86.5%)</option>
 				
@@ -1262,39 +1262,52 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) <span clas
 // @Failure 500 {object} models.ErrorResponse "Internal Server Error"
 // @Router /tasks [post]
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        log.Printf("Received create task request")
+
         var task models.Task
         if err := json.NewDecoder(r.Body).Decode(&amp;task); err != nil </span><span class="cov8" title="1">{
-                log.Printf("Error decoding task: %v", err) // Log the error
+                log.Printf("Error decoding task: %v", err)
                 http.Error(w, `{"error": "Invalid input data"}`, http.StatusBadRequest)
                 return
         }</span>
+        <span class="cov8" title="1">log.Printf("Decoded task: %+v", task)
 
-        <span class="cov8" title="1">if task.Title == "" </span><span class="cov8" title="1">{
+        if task.Title == "" </span><span class="cov8" title="1">{
+                log.Printf("Task creation failed: empty title")
                 http.Error(w, `{"error": "Title is required"}`, http.StatusBadRequest)
                 return
         }</span>
 
-        <span class="cov8" title="1">if task.Status == "" </span><span class="cov8" title="1">{
+        <span class="cov8" title="1">if task.Status == "" </span><span class="cov0" title="0">{
+                log.Printf("Setting default status 'pending' for task")
                 task.Status = "pending"
         }</span>
 
         // Get the user_id from the JWT claims
         <span class="cov8" title="1">claims, ok := r.Context().Value("claims").(*middleware.Claims)
         if !ok </span><span class="cov8" title="1">{
+                log.Printf("Task creation failed: missing or invalid claims in context")
                 http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
                 return
         }</span>
-        <span class="cov8" title="1">task.UserID = claims.UserID // Associate the task with the user
+        <span class="cov8" title="1">task.UserID = claims.UserID
+        log.Printf("Associated task with user ID: %d", task.UserID)
 
         if err := task.CreateTask(h.DB); err != nil </span><span class="cov8" title="1">{
-                log.Printf("Error creating task: %v", err) // Log the error
+                log.Printf("Error creating task in database: %v", err)
+                log.Printf("Failed task details: %+v", task)
                 http.Error(w, `{"error": "Failed to create task"}`, http.StatusInternalServerError)
                 return
         }</span>
 
-        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        <span class="cov8" title="1">log.Printf("Successfully created task with ID: %d", task.ID)
+        log.Printf("Final task details: %+v", task)
+
+        w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusCreated)
-        json.NewEncoder(w).Encode(task)</span>
+        if err := json.NewEncoder(w).Encode(task); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error encoding response: %v", err)
+        }</span>
 }
 
 // @Summary Update a task
@@ -1309,34 +1322,34 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) <span c
 // @Failure 400 {object} models.ErrorResponse "Invalid input data"
 // @Failure 500 {object} models.ErrorResponse "Internal Server Error"
 // @Router /tasks/{id} [put]
-func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         log.Printf("Received task update request")
         vars := mux.Vars(r)
         id, err := strconv.Atoi(vars["id"])
-        if err != nil </span><span class="cov8" title="1">{
+        if err != nil </span><span class="cov0" title="0">{
                 JSONError(w, "Invalid task ID", http.StatusBadRequest)
                 return
         }</span>
 
-        <span class="cov8" title="1">var task models.Task
-        if err := json.NewDecoder(r.Body).Decode(&amp;task); err != nil </span><span class="cov8" title="1">{
+        <span class="cov0" title="0">var task models.Task
+        if err := json.NewDecoder(r.Body).Decode(&amp;task); err != nil </span><span class="cov0" title="0">{
                 JSONError(w, "Invalid input data", http.StatusBadRequest)
                 return
         }</span>
 
-        <span class="cov8" title="1">task.ID = id // Assign the ID from the request URL
+        <span class="cov0" title="0">task.ID = id // Assign the ID from the request URL
 
-        if err := task.ValidateStatus(); err != nil </span><span class="cov8" title="1">{
+        if err := task.ValidateStatus(); err != nil </span><span class="cov0" title="0">{
                 JSONError(w, err.Error(), http.StatusBadRequest)
                 return
         }</span>
 
-        <span class="cov8" title="1">if err := task.UpdateTask(h.DB); err != nil </span><span class="cov8" title="1">{
+        <span class="cov0" title="0">if err := task.UpdateTask(h.DB); err != nil </span><span class="cov0" title="0">{
                 JSONError(w, "Failed to update task", http.StatusInternalServerError)
                 return
         }</span>
 
-        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        <span class="cov0" title="0">w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(task)</span>
 }
 
@@ -1614,21 +1627,41 @@ func GetTask(db database.DB, id int) (Task, error) <span class="cov8" title="1">
 }</span>
 
 func (t *Task) CreateTask(db database.DB) error <span class="cov8" title="1">{
+        // Start a transaction
+        tx, err := db.Begin()
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer tx.Rollback()
+
+        // Increment positions of existing tasks
+        _, err = tx.Exec(`
+        UPDATE tasks 
+        SET position = position + 1
+        WHERE user_id = $1`, t.UserID)
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        // Set the position of the new task to 0
+        <span class="cov8" title="1">t.Position = 0
+
+        // Insert the new task
         query := `
-        INSERT INTO tasks (title, description, status, user_id, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO tasks (title, description, status, user_id, position, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id`
 
         t.CreatedAt = time.Now()
         t.UpdatedAt = time.Now()
 
-        err := db.QueryRow(query, t.Title, t.Description, t.Status, t.UserID, t.CreatedAt, t.UpdatedAt).Scan(&amp;t.ID)
-        if err != nil </span><span class="cov0" title="0">{
-                log.Printf("Error inserting task into database: %v", err) // Log the error
+        err = tx.QueryRow(query, t.Title, t.Description, t.Status, t.UserID, t.Position, t.CreatedAt, t.UpdatedAt).Scan(&amp;t.ID)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("Error inserting task into database: %v", err)
                 return err
         }</span>
 
-        <span class="cov8" title="1">return nil</span>
+        <span class="cov8" title="1">return tx.Commit()</span>
 }
 
 func (t *Task) UpdateTask(db database.DB) error <span class="cov8" title="1">{

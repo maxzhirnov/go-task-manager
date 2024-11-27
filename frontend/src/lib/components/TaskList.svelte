@@ -1,12 +1,14 @@
 <script>
-    import { dndzone } from 'svelte-dnd-action';
+    import { dragHandleZone } from 'svelte-dnd-action';
     import { tasks } from '../stores.js';
     import TaskItem from './TaskItem.svelte';
     import { api } from '$lib/api.js';
     import { showError } from '$lib/stores.js';
     import { onMount } from 'svelte';
+    import {flip} from "svelte/animate";
 
-    let dragDisabled = false;
+    const flipDurationMs = 300;
+    const dragDisabled = false;
 
     // Load tasks when component mounts
     onMount(async () => {
@@ -24,15 +26,15 @@
 
     async function handleDndFinalize(e) {
         const newTasks = e.detail.items;
-        console.log('DnD Finalize event:', e.detail);
+        // console.log('DnD Finalize event:', e.detail);
         
         // Create positions map
         const positions = {};
         newTasks.forEach((task, index) => {
             positions[task.id] = index;
-            console.log(`Task ${task.id} moved to position ${index}`);
+            // console.log(`Task ${task.id} moved to position ${index}`);
         });
-        console.log('Positions to update:', positions);
+        // console.log('Positions to update:', positions);
 
         try {
             await api.updateTaskPositions(positions);
@@ -40,7 +42,7 @@
             const updatedTasks = await api.fetchTasks();
             tasks.set(updatedTasks);
         } catch (error) {
-            console.log('Error updating task positions:', error);
+            // console.log('Error updating task positions:', error);
             showError('Failed to update task positions');
             // Refresh tasks to restore original order
             const originalTasks = await api.fetchTasks();
@@ -50,11 +52,22 @@
 </script>
 
 <section
-    use:dndzone={{items: $tasks, dragDisabled}}
+    use:dragHandleZone={{
+        items: $tasks,
+        flipDurationMs,
+    }}
     on:consider={handleDndConsider}
     on:finalize={handleDndFinalize}
 >
     {#each $tasks as task (task.id)}
-        <TaskItem {task} />
+        <div class="task-wrapper" animate:flip="{{ duration: flipDurationMs }}">
+            <TaskItem {task} />
+        </div>
     {/each}
 </section>
+
+<style>
+    .task-wrapper {
+        width: 100%;
+    }
+</style>

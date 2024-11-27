@@ -2,7 +2,8 @@
     import { api } from '../api.js';
     import { tasks } from '../stores.js';
     import { showError } from '$lib/stores.js';
-
+    import { dragHandle } from 'svelte-dnd-action';
+    
 
     export let task;
     let isEditing = false;
@@ -53,72 +54,91 @@
         isEditing = false;
     }
 </script>
+
 <li class="task-item {task.status}">
-    {#if isEditing}
-        <div class="task-edit">
-            <input 
-                bind:value={editTitle} 
-                type="text" 
-                placeholder="Task Title" 
-                required
-                maxlength="100"
-            />
-            <span class="character-count">({editTitle.length}/100)</span>
-            <textarea 
-                bind:value={editDescription} 
-                placeholder="Task Description" 
-                required
-            ></textarea>
-            <select bind:value={editStatus}>
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-            </select>
-            <div class="edit-actions">
-                <button class="save-btn" on:click={handleEdit}>Save</button>
-                <button class="cancel-btn" on:click={cancelEdit}>Cancel</button>
-            </div>
-        </div>
-    {:else}
-        <div class="task-content">
-            <h3>{task.title}</h3>
-            <p>{task.description}</p>
-        </div>
-        <div class="task-actions">
-            <div class="edit-actions">
-                <button class="edit-btn" on:click={() => isEditing = true}>
-                    Edit
-                </button>
-                <button class="delete-btn" on:click={handleDelete}>
-                    Delete
-                </button>
-            </div>
-            <div class="edit-status">
-                <select 
-                    value={task.status} 
-                    on:change={(e) => handleStatusChange(e.target.value)}
-                >
+    <div class="drag-handle" use:dragHandle>⋮⋮</div>
+        {#if isEditing}
+            <div class="task-edit">
+                <input 
+                    bind:value={editTitle} 
+                    type="text" 
+                    placeholder="Task Title" 
+                    required
+                    maxlength="100"
+                />
+                <span class="character-count">({editTitle.length}/100)</span>
+                <textarea 
+                    bind:value={editDescription} 
+                    placeholder="Task Description" 
+                    required
+                ></textarea>
+                <select bind:value={editStatus}>
                     <option value="pending">Pending</option>
                     <option value="in_progress">In Progress</option>
                     <option value="completed">Completed</option>
                 </select>
+                <div class="edit-actions">
+                    <button class="save-btn" on:click={handleEdit}>Save</button>
+                    <button class="cancel-btn" on:click={cancelEdit}>Cancel</button>
+                </div>
             </div>
-        </div>
-    {/if}
+        {:else}
+            <div class="task-content">
+                <h3>{task.title}</h3>
+                <p>{task.description}</p>
+            </div>
+            <div class="task-actions">
+                <div class="edit-actions">
+                    <button class="edit-btn" on:click={() => isEditing = true}>
+                        Edit
+                    </button>
+                    <button class="delete-btn" on:click={handleDelete}>
+                        Delete
+                    </button>
+                </div>
+                <div class="edit-status">
+                    <select 
+                        value={task.status} 
+                        on:change={(e) => handleStatusChange(e.target.value)}
+                    >
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+        {/if}
 </li>
 
 <style>
     .task-item {
         background-color: #f5f5f5;
         margin: 10px 0;
-        padding: .7rem .7rem .7rem 1rem;
+        padding: .7rem .7rem .7rem 0rem;
         border-radius: 5px;
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
+        gap: 10px;
+    }
+
+    .drag-handle {
+        cursor: grab;
+        padding: 0 5px 0 10px;
+        font-size: 18px;
+        color: #666;
+        display: flex;
+        align-items: center;
+        touch-action: none;
+        user-select: none;
+    }
+
+    .drag-handle:active {
+        cursor: grabbing;
     }
 
     .task-content {
+        flex: 1;
         padding: 0 .7rem 0 0;
     }
 

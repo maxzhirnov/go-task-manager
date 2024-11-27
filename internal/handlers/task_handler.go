@@ -9,10 +9,8 @@
 package handlers
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -217,11 +215,20 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// @Summary Update task positions
+// @Description Update the positions of multiple tasks for the authenticated user
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param positions body map[int]int true "Map of task IDs to new positions"
+// @Success 200 {object} map[string]string "Positions updated successfully"
+// @Failure 400 {object} models.ErrorResponse "Invalid input"
+// @Failure 404 {object} models.ErrorResponse "Task not found"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /tasks/positions [put]
 func (h *TaskHandler) UpdateTaskPositions(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received positions update request")
-	body, _ := io.ReadAll(r.Body)
-	log.Printf("Received positions update request body: %s", string(body))
-	r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	claims := r.Context().Value("claims").(*middleware.Claims)
 	userID := claims.UserID

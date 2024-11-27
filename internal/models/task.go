@@ -159,6 +159,19 @@ func (t *Task) ValidateStatus() error {
 
 func DeleteTask(db database.DB, id int) error {
 	query := `DELETE FROM tasks WHERE id = $1`
-	_, err := db.Exec(query, id)
-	return err
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("task not found")
+	}
+
+	return nil
 }

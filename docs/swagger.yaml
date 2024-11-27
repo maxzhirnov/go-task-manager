@@ -31,6 +31,8 @@ definitions:
         type: string
       id:
         type: integer
+      position:
+        type: integer
       status:
         type: string
       title:
@@ -330,6 +332,46 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a task
+      tags:
+      - tasks
+  /tasks/positions:
+    put:
+      consumes:
+      - application/json
+      description: Update the positions of multiple tasks for the authenticated user
+      parameters:
+      - description: Map of task IDs to new positions
+        in: body
+        name: positions
+        required: true
+        schema:
+          additionalProperties:
+            type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Positions updated successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update task positions
       tags:
       - tasks
 securityDefinitions:

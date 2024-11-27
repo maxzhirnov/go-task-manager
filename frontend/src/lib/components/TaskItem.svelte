@@ -118,6 +118,10 @@
         align-items: flex-start;
     }
 
+    .task-content {
+        padding: 0 .7rem 0 0;
+    }
+
     .task-content h3 {
         margin: 0 0 .7rem 0;
     }

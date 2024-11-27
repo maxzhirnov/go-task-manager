@@ -82,7 +82,11 @@ async function editTask(taskId, title, description, status) {
 }
 
 export const api = {
-    fetchTasks: () => handleApiRequest(API_URL),
+    fetchTasks: async () => {
+        const tasks = await handleApiRequest(API_URL);
+        // Sort tasks by position in descending order
+        return tasks.sort((a, b) => a.position - b.position);
+    },
     
     addTask: (title, description, status) => handleApiRequest(API_URL, {
         method: "POST",
@@ -114,8 +118,6 @@ export const api = {
     },
 
     updateTaskPositions: async (positions) => {
-        // console.log('Sending positions update:', positions);
-        // console.log('Request URL:', `${API_URL}/positions`);
         return handleApiRequest(`${API_URL}/positions`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },

@@ -24,14 +24,15 @@
 
     async function handleDndFinalize(e) {
         const newTasks = e.detail.items;
-        // console.log('DnD Finalize event:', e.detail);
+        console.log('DnD Finalize event:', e.detail);
         
         // Create positions map
         const positions = {};
         newTasks.forEach((task, index) => {
             positions[task.id] = index;
+            console.log(`Task ${task.id} moved to position ${index}`);
         });
-        // console.log('Positions to update:', positions);
+        console.log('Positions to update:', positions);
 
         try {
             await api.updateTaskPositions(positions);
@@ -39,7 +40,7 @@
             const updatedTasks = await api.fetchTasks();
             tasks.set(updatedTasks);
         } catch (error) {
-            // console.log('Error updating task positions:', error);
+            console.log('Error updating task positions:', error);
             showError('Failed to update task positions');
             // Refresh tasks to restore original order
             const originalTasks = await api.fetchTasks();

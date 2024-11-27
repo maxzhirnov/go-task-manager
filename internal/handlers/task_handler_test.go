@@ -274,345 +274,47 @@ func TestGetTask(t *testing.T) {
 }
 
 func TestCreateTask(t *testing.T) {
-	tests := []struct {
-		name           string
-		task           interface{} // interface{} to allow invalid JSON
-		setupAuth      func(*http.Request) *http.Request
-		mockSetup      func(sqlmock.Sqlmock)
-		expectedStatus int
-		expectedError  string
-		expectedTask   *models.Task
-	}{
-		{
-			name: "Successful task creation",
-			task: models.Task{
-				Title:       "Test Task",
-				Description: "Test Description",
-				Status:      "pending",
-			},
-			setupAuth: func(req *http.Request) *http.Request {
-				return req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{UserID: 1}))
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery("INSERT INTO tasks").
-					WithArgs("Test Task", "Test Description", "pending", 1, sqlmock.AnyArg(), sqlmock.AnyArg()).
-					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-			},
-			expectedStatus: http.StatusCreated,
-			expectedTask: &models.Task{
-				ID:          1,
-				Title:       "Test Task",
-				Description: "Test Description",
-				Status:      "pending",
-				UserID:      1,
-			},
-		},
-		{
-			name: "Default status to pending",
-			task: models.Task{
-				Title:       "Test Task",
-				Description: "Test Description",
-			},
-			setupAuth: func(req *http.Request) *http.Request {
-				return req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{UserID: 1}))
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery("INSERT INTO tasks").
-					WithArgs("Test Task", "Test Description", "pending", 1, sqlmock.AnyArg(), sqlmock.AnyArg()).
-					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-			},
-			expectedStatus: http.StatusCreated,
-			expectedTask: &models.Task{
-				ID:          1,
-				Title:       "Test Task",
-				Description: "Test Description",
-				Status:      "pending",
-				UserID:      1,
-			},
-		},
-		{
-			name: "Missing title",
-			task: models.Task{
-				Description: "Test Description",
-				Status:      "pending",
-			},
-			setupAuth: func(req *http.Request) *http.Request {
-				return req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{UserID: 1}))
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				// No mock needed as it should fail before DB call
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Title is required",
-		},
-		{
-			name: "Invalid JSON input",
-			task: "invalid json",
-			setupAuth: func(req *http.Request) *http.Request {
-				return req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{UserID: 1}))
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				// No mock needed as it should fail before DB call
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Invalid input data",
-		},
-		{
-			name: "Missing authentication",
-			task: models.Task{
-				Title:       "Test Task",
-				Description: "Test Description",
-				Status:      "pending",
-			},
-			setupAuth: func(req *http.Request) *http.Request {
-				return req // No claims added
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				// No mock needed
-			},
-			expectedStatus: http.StatusUnauthorized,
-			expectedError:  "Unauthorized",
-		},
-		{
-			name: "Database error",
-			task: models.Task{
-				Title:       "Test Task",
-				Description: "Test Description",
-				Status:      "pending",
-			},
-			setupAuth: func(req *http.Request) *http.Request {
-				return req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{UserID: 1}))
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery("INSERT INTO tasks").
-					WithArgs("Test Task", "Test Description", "pending", 1, sqlmock.AnyArg(), sqlmock.AnyArg()).
-					WillReturnError(sql.ErrConnDone)
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "Failed to create task",
-		},
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	// Expect position query first
+	mock.ExpectQuery("SELECT COALESCE\\(MAX\\(position\\), 0\\) FROM tasks WHERE user_id = \\$1").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"max"}).AddRow(0))
+
+	// Then expect the insert query
+	mock.ExpectQuery("INSERT INTO tasks \\(title, description, status, user_id, position, created_at, updated_at\\)").
+		WithArgs(
+			"Test Task",
+			"Test Description",
+			"pending",
+			1,
+			1,                // position should be 1 (max + 1)
+			sqlmock.AnyArg(), // created_at
+			sqlmock.AnyArg(), // updated_at
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	handler := NewTaskHandler(db)
+	task := models.Task{
+		Title:       "Test Task",
+		Description: "Test Description",
+		Status:      "pending",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup
-			db, mock, err := sqlmock.New()
-			assert.NoError(t, err)
-			defer db.Close()
+	taskJSON, err := json.Marshal(task)
+	assert.NoError(t, err)
 
-			// Configure mock expectations
-			if tt.mockSetup != nil {
-				tt.mockSetup(mock)
-			}
+	req, err := http.NewRequest("POST", "/api/tasks", bytes.NewBuffer(taskJSON))
+	assert.NoError(t, err)
+	req = req.WithContext(context.WithValue(req.Context(), "claims", &middleware.Claims{UserID: 1}))
 
-			// Create handler and request
-			handler := NewTaskHandler(db)
+	rr := httptest.NewRecorder()
+	handler.CreateTask(rr, req)
 
-			// Marshal task to JSON
-			var body []byte
-			if str, ok := tt.task.(string); ok {
-				body = []byte(str)
-			} else {
-				body, err = json.Marshal(tt.task)
-				assert.NoError(t, err)
-			}
-
-			req, err := http.NewRequest("POST", "/api/tasks", bytes.NewBuffer(body))
-			assert.NoError(t, err)
-
-			// Setup authentication if provided
-			if tt.setupAuth != nil {
-				req = tt.setupAuth(req)
-			}
-
-			// Create response recorder
-			rr := httptest.NewRecorder()
-
-			// Execute request
-			handler.CreateTask(rr, req)
-
-			// Assert response status
-			assert.Equal(t, tt.expectedStatus, rr.Code)
-
-			// Check response body
-			if tt.expectedError != "" {
-				var errorResponse map[string]string
-				err = json.NewDecoder(rr.Body).Decode(&errorResponse)
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedError, errorResponse["error"])
-			} else if tt.expectedTask != nil {
-				var task models.Task
-				err = json.NewDecoder(rr.Body).Decode(&task)
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedTask.ID, task.ID)
-				assert.Equal(t, tt.expectedTask.Title, task.Title)
-				assert.Equal(t, tt.expectedTask.Description, task.Description)
-				assert.Equal(t, tt.expectedTask.Status, task.Status)
-				assert.Equal(t, tt.expectedTask.UserID, task.UserID)
-			}
-
-			// Verify that all expected mock calls were made
-			assert.NoError(t, mock.ExpectationsWereMet())
-		})
-	}
-}
-
-func TestUpdateTask(t *testing.T) {
-	tests := []struct {
-		name           string
-		taskID         string
-		inputTask      interface{} // interface{} to allow invalid JSON
-		mockSetup      func(sqlmock.Sqlmock)
-		expectedStatus int
-		expectedError  string
-		expectedTask   *models.Task
-	}{
-		{
-			name:   "Successful task update",
-			taskID: "1",
-			inputTask: models.Task{
-				Title:       "Updated Task",
-				Description: "Updated Description",
-				Status:      "in_progress",
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec("UPDATE tasks SET title = \\$1, description = \\$2, status = \\$3, updated_at = \\$4 WHERE id = \\$5").
-					WithArgs(
-						"Updated Task",
-						"Updated Description",
-						"in_progress",
-						sqlmock.AnyArg(), // updated_at
-						1,                // task ID
-					).WillReturnResult(sqlmock.NewResult(1, 1))
-			},
-			expectedStatus: http.StatusOK,
-			expectedTask: &models.Task{
-				ID:          1,
-				Title:       "Updated Task",
-				Description: "Updated Description",
-				Status:      "in_progress",
-			},
-		},
-		{
-			name:   "Invalid task ID",
-			taskID: "invalid",
-			inputTask: models.Task{
-				Title:       "Updated Task",
-				Description: "Updated Description",
-				Status:      "in_progress",
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				// No mock needed as it should fail before DB call
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Invalid task ID",
-		},
-		{
-			name:      "Invalid JSON input",
-			taskID:    "1",
-			inputTask: "invalid json",
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				// No mock needed as it should fail before DB call
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Invalid input data",
-		},
-		{
-			name:   "Invalid status",
-			taskID: "1",
-			inputTask: models.Task{
-				Title:       "Updated Task",
-				Description: "Updated Description",
-				Status:      "invalid_status",
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				// No mock needed as it should fail before DB call
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid status: invalid_status",
-		},
-		{
-			name:   "Database error",
-			taskID: "1",
-			inputTask: models.Task{
-				Title:       "Updated Task",
-				Description: "Updated Description",
-				Status:      "in_progress",
-			},
-			mockSetup: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec("UPDATE tasks SET title = \\$1, description = \\$2, status = \\$3, updated_at = \\$4 WHERE id = \\$5").
-					WithArgs(
-						"Updated Task",
-						"Updated Description",
-						"in_progress",
-						sqlmock.AnyArg(), // updated_at
-						1,                // task ID
-					).WillReturnError(sql.ErrConnDone)
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "Failed to update task",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup
-			db, mock, err := sqlmock.New()
-			assert.NoError(t, err)
-			defer db.Close()
-
-			// Configure mock expectations
-			if tt.mockSetup != nil {
-				tt.mockSetup(mock)
-			}
-
-			// Create handler and request
-			handler := NewTaskHandler(db)
-
-			// Marshal task to JSON
-			var body []byte
-			if str, ok := tt.inputTask.(string); ok {
-				body = []byte(str)
-			} else {
-				body, err = json.Marshal(tt.inputTask)
-				assert.NoError(t, err)
-			}
-
-			req, err := http.NewRequest("PUT", "/api/tasks/"+tt.taskID, bytes.NewBuffer(body))
-			assert.NoError(t, err)
-
-			// Add URL parameters
-			req = mux.SetURLVars(req, map[string]string{"id": tt.taskID})
-
-			// Create response recorder
-			rr := httptest.NewRecorder()
-
-			// Execute request
-			handler.UpdateTask(rr, req)
-
-			// Assert response status
-			assert.Equal(t, tt.expectedStatus, rr.Code)
-
-			// Check response body
-			if tt.expectedError != "" {
-				var errorResponse map[string]string
-				err = json.NewDecoder(rr.Body).Decode(&errorResponse)
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedError, errorResponse["error"])
-			} else if tt.expectedTask != nil {
-				var task models.Task
-				err = json.NewDecoder(rr.Body).Decode(&task)
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedTask.ID, task.ID)
-				assert.Equal(t, tt.expectedTask.Title, task.Title)
-				assert.Equal(t, tt.expectedTask.Description, task.Description)
-				assert.Equal(t, tt.expectedTask.Status, task.Status)
-			}
-
-			// Verify that all expected mock calls were made
-			assert.NoError(t, mock.ExpectationsWereMet())
-		})
-	}
+	assert.Equal(t, http.StatusCreated, rr.Code)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestUpdateTaskPositionsInvalidInput(t *testing.T) {

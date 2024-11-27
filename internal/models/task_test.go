@@ -292,36 +292,6 @@ func TestGetTask(t *testing.T) {
 	}
 }
 
-func TestCreateTask(t *testing.T) {
-	// Create a new mock DB
-	db, mock, err := sqlmock.New()
-	assert.NoError(t, err)
-	defer db.Close()
-
-	// Mock the expected SQL query and result
-	mock.ExpectQuery("INSERT INTO tasks").
-		WithArgs("Test Task", "Test Description", "pending", 1, sqlmock.AnyArg(), sqlmock.AnyArg()). // Include user_id = 1
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-
-	// Create test task
-	task := &Task{
-		Title:       "Test Task",
-		Description: "Test Description",
-		Status:      "pending",
-		UserID:      1, // Set the user ID
-	}
-
-	// Call the CreateTask function
-	err = task.CreateTask(db)
-	assert.NoError(t, err)
-
-	// Validate the task ID
-	assert.Equal(t, 1, task.ID)
-
-	// Ensure all expectations were met
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
 func TestUpdateTask(t *testing.T) {
 	// Create a new mock DB
 	db, mock, err := sqlmock.New()
@@ -594,6 +564,154 @@ func TestValidateStatus(t *testing.T) {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError, err.Error())
 			}
+		})
+	}
+}
+
+func TestCreateTask(t *testing.T) {
+	tests := []struct {
+		name        string
+		task        Task
+		mockSetup   func(sqlmock.Sqlmock)
+		expectError bool
+		expectedID  int
+		expectedPos int
+	}{
+		{
+			name: "Successful task creation - first task",
+			task: Task{
+				Title:       "Test Task",
+				Description: "Test Description",
+				Status:      "pending",
+				UserID:      1,
+			},
+			mockSetup: func(mock sqlmock.Sqlmock) {
+				// Mock getting highest position
+				mock.ExpectQuery("SELECT COALESCE\\(MAX\\(position\\), 0\\) FROM tasks WHERE user_id = \\$1").
+					WithArgs(1).
+					WillReturnRows(sqlmock.NewRows([]string{"max"}).AddRow(0))
+
+				// Mock task insertion
+				mock.ExpectQuery("INSERT INTO tasks \\(title, description, status, user_id, position, created_at, updated_at\\)").
+					WithArgs(
+						"Test Task",
+						"Test Description",
+						"pending",
+						1,
+						1,                // position should be 1 for first task
+						sqlmock.AnyArg(), // created_at
+						sqlmock.AnyArg(), // updated_at
+					).
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+			},
+			expectError: false,
+			expectedID:  1,
+			expectedPos: 1,
+		},
+		{
+			name: "Successful task creation - subsequent task",
+			task: Task{
+				Title:       "Test Task",
+				Description: "Test Description",
+				Status:      "pending",
+				UserID:      1,
+			},
+			mockSetup: func(mock sqlmock.Sqlmock) {
+				// Mock getting highest position
+				mock.ExpectQuery("SELECT COALESCE\\(MAX\\(position\\), 0\\) FROM tasks WHERE user_id = \\$1").
+					WithArgs(1).
+					WillReturnRows(sqlmock.NewRows([]string{"max"}).AddRow(3))
+
+				// Mock task insertion
+				mock.ExpectQuery("INSERT INTO tasks \\(title, description, status, user_id, position, created_at, updated_at\\)").
+					WithArgs(
+						"Test Task",
+						"Test Description",
+						"pending",
+						1,
+						4, // position should be max + 1
+						sqlmock.AnyArg(),
+						sqlmock.AnyArg(),
+					).
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(2))
+			},
+			expectError: false,
+			expectedID:  2,
+			expectedPos: 4,
+		},
+		{
+			name: "Error getting highest position",
+			task: Task{
+				Title:       "Test Task",
+				Description: "Test Description",
+				Status:      "pending",
+				UserID:      1,
+			},
+			mockSetup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery("SELECT COALESCE\\(MAX\\(position\\), 0\\) FROM tasks WHERE user_id = \\$1").
+					WithArgs(1).
+					WillReturnError(sql.ErrConnDone)
+			},
+			expectError: true,
+		},
+		{
+			name: "Error inserting task",
+			task: Task{
+				Title:       "Test Task",
+				Description: "Test Description",
+				Status:      "pending",
+				UserID:      1,
+			},
+			mockSetup: func(mock sqlmock.Sqlmock) {
+				// Mock getting highest position
+				mock.ExpectQuery("SELECT COALESCE\\(MAX\\(position\\), 0\\) FROM tasks WHERE user_id = \\$1").
+					WithArgs(1).
+					WillReturnRows(sqlmock.NewRows([]string{"max"}).AddRow(0))
+
+				// Mock insertion error
+				mock.ExpectQuery("INSERT INTO tasks").
+					WithArgs(
+						"Test Task",
+						"Test Description",
+						"pending",
+						1,
+						1,
+						sqlmock.AnyArg(),
+						sqlmock.AnyArg(),
+					).
+					WillReturnError(sql.ErrConnDone)
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup
+			db, mock, err := sqlmock.New()
+			assert.NoError(t, err)
+			defer db.Close()
+
+			// Configure mock expectations
+			tt.mockSetup(mock)
+
+			// Execute function
+			err = tt.task.CreateTask(db)
+
+			// Assert error
+			if tt.expectError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedID, tt.task.ID)
+			assert.Equal(t, tt.expectedPos, tt.task.Position)
+			assert.NotZero(t, tt.task.CreatedAt)
+			assert.NotZero(t, tt.task.UpdatedAt)
+
+			// Verify that all expected mock calls were made
+			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
 }

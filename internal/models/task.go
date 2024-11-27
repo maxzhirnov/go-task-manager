@@ -62,18 +62,24 @@ func GetTask(db database.DB, id int) (Task, error) {
 }
 
 func (t *Task) CreateTask(db database.DB) error {
-	// Get the highest position for the user's tasks
-	var highestPosition int
-	err := db.QueryRow(`
-        SELECT COALESCE(MAX(position), 0) 
-        FROM tasks 
-        WHERE user_id = $1`, t.UserID).Scan(&highestPosition)
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Increment positions of existing tasks
+	_, err = tx.Exec(`
+        UPDATE tasks 
+        SET position = position + 1
+        WHERE user_id = $1`, t.UserID)
 	if err != nil {
 		return err
 	}
 
-	// Set the position of the new task to the highest position + 1
-	t.Position = highestPosition + 1
+	// Set the position of the new task to 0
+	t.Position = 0
 
 	// Insert the new task
 	query := `
@@ -84,13 +90,13 @@ func (t *Task) CreateTask(db database.DB) error {
 	t.CreatedAt = time.Now()
 	t.UpdatedAt = time.Now()
 
-	err = db.QueryRow(query, t.Title, t.Description, t.Status, t.UserID, t.Position, t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
+	err = tx.QueryRow(query, t.Title, t.Description, t.Status, t.UserID, t.Position, t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
 	if err != nil {
-		log.Printf("Error inserting task into database: %v", err) // Log the error
+		log.Printf("Error inserting task into database: %v", err)
 		return err
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (t *Task) UpdateTask(db database.DB) error {

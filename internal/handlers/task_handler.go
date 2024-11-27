@@ -110,39 +110,52 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} models.ErrorResponse "Internal Server Error"
 // @Router /tasks [post]
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received create task request")
+
 	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		log.Printf("Error decoding task: %v", err) // Log the error
+		log.Printf("Error decoding task: %v", err)
 		http.Error(w, `{"error": "Invalid input data"}`, http.StatusBadRequest)
 		return
 	}
+	log.Printf("Decoded task: %+v", task)
 
 	if task.Title == "" {
+		log.Printf("Task creation failed: empty title")
 		http.Error(w, `{"error": "Title is required"}`, http.StatusBadRequest)
 		return
 	}
 
 	if task.Status == "" {
+		log.Printf("Setting default status 'pending' for task")
 		task.Status = "pending"
 	}
 
 	// Get the user_id from the JWT claims
 	claims, ok := r.Context().Value("claims").(*middleware.Claims)
 	if !ok {
+		log.Printf("Task creation failed: missing or invalid claims in context")
 		http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
-	task.UserID = claims.UserID // Associate the task with the user
+	task.UserID = claims.UserID
+	log.Printf("Associated task with user ID: %d", task.UserID)
 
 	if err := task.CreateTask(h.DB); err != nil {
-		log.Printf("Error creating task: %v", err) // Log the error
+		log.Printf("Error creating task in database: %v", err)
+		log.Printf("Failed task details: %+v", task)
 		http.Error(w, `{"error": "Failed to create task"}`, http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("Successfully created task with ID: %d", task.ID)
+	log.Printf("Final task details: %+v", task)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(task)
+	if err := json.NewEncoder(w).Encode(task); err != nil {
+		log.Printf("Error encoding response: %v", err)
+	}
 }
 
 // @Summary Update a task

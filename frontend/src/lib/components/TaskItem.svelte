@@ -31,6 +31,11 @@
     }
 
     async function handleEdit() {
+        if (editTitle.length > 100) {
+            showError("Task title cannot exceed 100 characters.");
+            return;
+        }
+
         try {
             await api.updateTask(task.id, editTitle, editDescription, editStatus);
             const updatedTasks = await api.fetchTasks();
@@ -56,7 +61,9 @@
                 type="text" 
                 placeholder="Task Title" 
                 required
+                maxlength="100"
             />
+            <span class="character-count">({editTitle.length}/100)</span>
             <textarea 
                 bind:value={editDescription} 
                 placeholder="Task Description" 
@@ -76,22 +83,26 @@
         <div class="task-content">
             <h3>{task.title}</h3>
             <p>{task.description}</p>
-            <select 
-                value={task.status} 
-                on:change={(e) => handleStatusChange(e.target.value)}
-            >
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-            </select>
         </div>
         <div class="task-actions">
-            <button class="edit-btn" on:click={() => isEditing = true}>
-                Edit
-            </button>
-            <button class="delete-btn" on:click={handleDelete}>
-                Delete
-            </button>
+            <div class="edit-actions">
+                <button class="edit-btn" on:click={() => isEditing = true}>
+                    Edit
+                </button>
+                <button class="delete-btn" on:click={handleDelete}>
+                    Delete
+                </button>
+            </div>
+            <div class="edit-status">
+                <select 
+                    value={task.status} 
+                    on:change={(e) => handleStatusChange(e.target.value)}
+                >
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
         </div>
     {/if}
 </li>
@@ -100,11 +111,32 @@
     .task-item {
         background-color: #f5f5f5;
         margin: 10px 0;
-        padding: 15px;
+        padding: .7rem .7rem .7rem 1rem;
         border-radius: 5px;
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
+    }
+
+    .task-content h3 {
+        margin: 0 0 .7rem 0;
+    }
+
+    .task-content p {
+        margin: 0 0 .7rem 0;
+    }
+
+    .edit-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .edit-status { 
+        margin-top: 1rem;
+    }
+
+    .edit-status select {
+        width: 100%;
     }
 
     .task-edit {
@@ -130,6 +162,12 @@
     .edit-actions {
         display: flex;
         gap: 10px;
+    }
+
+    .character-count {
+        font-size: 12px;
+        color: #666;
+        margin-left: 5px;
     }
 
     .save-btn,
@@ -163,7 +201,7 @@
         color: white;
     }
 
-    .task-item.pending { border-left: 4px solid #ffd700; }
-    .task-item.in_progress { border-left: 4px solid #1e90ff; }
-    .task-item.completed { border-left: 4px solid #32cd32; }
+    .task-item.pending { border-left: 6px solid #ffd700; }
+    .task-item.in_progress { border-left: 6px solid #1e90ff; }
+    .task-item.completed { border-left: 6px solid #32cd32; }
 </style>

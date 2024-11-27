@@ -8,6 +8,11 @@
     let status = 'pending';
 
     async function handleSubmit() {
+        if (title.length > 100) {
+            showError("Task title cannot exceed 100 characters.");
+            return;
+        }
+
         await api.addTask(title, description, status);
         const updatedTasks = await api.fetchTasks();
         tasks.set(updatedTasks);
@@ -26,8 +31,15 @@
         </button>
     {:else}
         <form class="task-form" on:submit|preventDefault={handleSubmit}>
-            <input bind:value={title} type="text" placeholder="Task Title" required>
-            <textarea bind:value={description} placeholder="Task Description" required></textarea>
+            <input 
+                bind:value={title} 
+                type="text" 
+                placeholder="Task Title" 
+                required
+                maxlength="100"
+            />
+            <span class="character-count">({title.length}/100)</span>
+            <textarea bind:value={description} placeholder="Task Description"></textarea>
             <select bind:value={status} required>
                 <option value="pending">Pending</option>
                 <option value="in_progress">In Progress</option>
@@ -40,7 +52,7 @@
 
 <style>
     .task-creation-container {
-        margin-top: 3rem;
+        margin: 3rem 0 1rem 0;
     }
 
     .task-form {
@@ -79,6 +91,12 @@
 
     .task-form button:hover {
         background-color: #45a049;
+    }
+
+    .character-count {
+        font-size: 12px;
+        color: #666;
+        margin-left: 5px;
     }
 
     @media screen and (max-width: 600px) {

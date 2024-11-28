@@ -1,4 +1,4 @@
-.PHONY: dev prod
+.PHONY: dev prod test cover
 
 dev:
 	docker-compose -f docker-compose.dev.yml up --build

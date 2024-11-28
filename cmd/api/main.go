@@ -46,6 +46,8 @@ func setupRouter() *mux.Router {
 	api.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods("PUT")
 	api.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
 
+	api.HandleFunc("/users/statistics", taskHandler.GetUserStatistics).Methods("GET")
+
 	// Swagger documentation
 	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),

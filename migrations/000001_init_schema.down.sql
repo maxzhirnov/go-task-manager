@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_tasks_user_position;
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS users;

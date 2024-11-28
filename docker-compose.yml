@@ -26,7 +26,7 @@ services:
       - POSTGRES_DB=taskmanager
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./scripts/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      #- ./scripts/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -35,6 +35,14 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    command: ["-path", "/migrations", "-database", "postgres://postgres:mysecretpassword@db:5432/taskmanager?sslmode=disable", "up"]
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:

@@ -1,5 +1,7 @@
 <script>
     import { user } from '../stores.js';
+    import { goto } from '$app/navigation';
+    import { page } from '$app/stores';
 
     function logout() {
         localStorage.removeItem("jwt");
@@ -9,9 +11,17 @@
 </script>
 
 <div class="header-container">
-    <a href="/" class="title-link" on:click={window.location.reload()}>
-        <h1>Task Manager</h1>
-    </a>
+    <div class="title">
+        <a href="/" class="title-link" on:click|preventDefault={() => goto('/')}>
+            <h1>Task Manager</h1>
+        </a>
+    </div>
+    <div class="nav-section">
+        <nav class="nav-links">
+            <a class="nav-link" class:active={$page.url.pathname === '/'} href="/" on:click|preventDefault={() => goto('/')}>Tasks</a>
+            <a class="nav-link" class:active={$page.url.pathname === '/statistics'} href="/statistics" on:click|preventDefault={() => goto('/statistics')}>Statistics</a>
+        </nav>
+    </div>
     <div class="user-info">
         <span>Welcome, {$user}</span>
         <button class="logout-btn" on:click={logout}>Logout</button>
@@ -64,8 +74,38 @@
         background-color: #da190b;
     }
 
+    .nav-section {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex: 1;
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 15px;
+        margin-left: 20px;
+    }
+
+    .nav-link {
+        text-decoration: none;
+        color: #666;
+        padding: 5px 10px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+        background-color: #f5f5f5;
+    }
+
+    .nav-link.active {
+        color: #2196F3;
+        font-weight: bold;
+    }
+
     @media screen and (max-width: 600px) {
-        .title-link { 
+        .title { 
             order: 2; 
         }
         
@@ -86,6 +126,18 @@
         .logout-btn {
             width: 100px;
             padding: 10px;
+        }
+
+        .nav-section {
+            order: 3;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .nav-links {
+            margin: 10px 0;
+            width: 100%;
+            justify-content: center;
         }
     }
 </style>

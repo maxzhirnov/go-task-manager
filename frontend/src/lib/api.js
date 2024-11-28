@@ -1,4 +1,6 @@
 const API_URL = '/api/tasks';
+const USER_API_URL = '/api/users';
+
 
 export async function fetchWithAuth(url, options = {}) {
     try {
@@ -122,6 +124,13 @@ export const api = {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(positions)
+        });
+    },
+
+    getUserStatistics: async () => {
+        return handleApiRequest(`${USER_API_URL}/statistics`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" }
         });
     }
 };

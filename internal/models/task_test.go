@@ -18,7 +18,7 @@ func TestGetTasks(t *testing.T) {
 		mockSetup     func(sqlmock.Sqlmock)
 		expectedTasks []Task
 		expectedError error
-		errorCheck    func(error) bool // Add a custom error check function
+		errorCheck    func(error) bool
 	}{
 		{
 			name:   "Successfully get multiple tasks",
@@ -30,7 +30,8 @@ func TestGetTasks(t *testing.T) {
 					AddRow(1, "Task 1", "Description 1", "pending", 1, 0, time.Now(), time.Now()).
 					AddRow(2, "Task 2", "Description 2", "in_progress", 1, 1, time.Now(), time.Now())
 
-				mock.ExpectQuery("SELECT (.+) FROM tasks WHERE user_id = \\$1 ORDER BY position ASC").
+				// Updated SQL query pattern to match the new query
+				mock.ExpectQuery("SELECT (.+) FROM tasks WHERE user_id = \\$1 AND status != 'deleted' ORDER BY position ASC").
 					WithArgs(1).
 					WillReturnRows(rows)
 			},
@@ -62,7 +63,7 @@ func TestGetTasks(t *testing.T) {
 					"id", "title", "description", "status", "user_id", "position", "created_at", "updated_at",
 				})
 
-				mock.ExpectQuery("SELECT (.+) FROM tasks WHERE user_id = \\$1 ORDER BY position ASC").
+				mock.ExpectQuery("SELECT (.+) FROM tasks WHERE user_id = \\$1 AND status != 'deleted' ORDER BY position ASC").
 					WithArgs(1).
 					WillReturnRows(rows)
 			},
@@ -73,7 +74,7 @@ func TestGetTasks(t *testing.T) {
 			name:   "Database error",
 			userID: 1,
 			mockSetup: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery("SELECT (.+) FROM tasks WHERE user_id = \\$1 ORDER BY position ASC").
+				mock.ExpectQuery("SELECT (.+) FROM tasks WHERE user_id = \\$1 AND status != 'deleted' ORDER BY position ASC").
 					WithArgs(1).
 					WillReturnError(sql.ErrConnDone)
 			},
@@ -87,16 +88,16 @@ func TestGetTasks(t *testing.T) {
 				rows := sqlmock.NewRows([]string{
 					"id", "title", "description", "status", "user_id", "position", "created_at", "updated_at",
 				}).
-					AddRow("invalid", "Task 1", "Description 1", "pending", 1, 0, time.Now(), time.Now()) // Invalid ID type
+					AddRow("invalid", "Task 1", "Description 1", "pending", 1, 0, time.Now(), time.Now())
 
-				mock.ExpectQuery("SELECT (.+) FROM tasks WHERE user_id = \\$1 ORDER BY position ASC").
+				mock.ExpectQuery("SELECT (.+) FROM tasks WHERE user_id = \\$1 AND status != 'deleted' ORDER BY position ASC").
 					WithArgs(1).
 					WillReturnRows(rows)
 			},
 			expectedTasks: nil,
-			expectedError: fmt.Errorf("scan error"), // Just need any error
+			expectedError: fmt.Errorf("scan error"),
 			errorCheck: func(err error) bool {
-				return err != nil // Just check that there is an error
+				return err != nil
 			},
 		},
 	}
@@ -313,25 +314,6 @@ func TestUpdateTask(t *testing.T) {
 
 	// Call the UpdateTask function
 	err = task.UpdateTask(db)
-	assert.NoError(t, err)
-
-	// Ensure all expectations were met
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestDeleteTask(t *testing.T) {
-	// Create a new mock DB
-	db, mock, err := sqlmock.New()
-	assert.NoError(t, err)
-	defer db.Close()
-
-	// Mock the expected SQL query and result
-	mock.ExpectExec("DELETE FROM tasks").
-		WithArgs(1).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
-	// Call the DeleteTask function
-	err = DeleteTask(db, 1)
 	assert.NoError(t, err)
 
 	// Ensure all expectations were met
@@ -700,4 +682,44 @@ func TestCreateTask(t *testing.T) {
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
+}
+
+func TestDeleteTask(t *testing.T) {
+	// Create a new mock DB
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	// Mock the expected SQL query and result
+	mock.ExpectExec("UPDATE tasks").
+		WithArgs(sqlmock.AnyArg(), 1). // Use AnyArg() for timestamp
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	// Call the DeleteTask function
+	err = DeleteTask(db, 1)
+	assert.NoError(t, err)
+
+	// Ensure all expectations were met
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// Add test for when task is not found
+func TestDeleteTaskNotFound(t *testing.T) {
+	// Create a new mock DB
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	// Mock the expected SQL query with no rows affected
+	mock.ExpectExec("UPDATE tasks").
+		WithArgs(sqlmock.AnyArg(), 1).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	// Call the DeleteTask function
+	err = DeleteTask(db, 1)
+	assert.Error(t, err)
+	assert.Equal(t, "task not found", err.Error())
+
+	// Ensure all expectations were met
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

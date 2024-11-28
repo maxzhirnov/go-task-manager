@@ -32,6 +32,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    command: ["-path", "/migrations", "-database", "postgres://postgres:mysecretpassword@db:5432/taskmanager?sslmode=disable", "up"]
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:

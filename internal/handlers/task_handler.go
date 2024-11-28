@@ -273,3 +273,34 @@ func (h *TaskHandler) UpdateTaskPositions(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Positions updated successfully"})
 }
+
+// @Summary Get user statistics
+// @Description Get statistics for the authenticated user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.UserStatistics
+// @Failure 401 {object} models.ErrorResponse "Unauthorized"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /users/statistics [get]
+func (h *TaskHandler) GetUserStatistics(w http.ResponseWriter, r *http.Request) {
+	// Get the user_id from the JWT claims
+	claims, ok := r.Context().Value("claims").(*middleware.Claims)
+	if !ok {
+		JSONError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get statistics for the user
+	stats, err := models.GetUserStatistics(h.DB, claims.UserID)
+	if err != nil {
+		log.Printf("Error fetching user statistics: %v", err)
+		JSONError(w, "Failed to fetch user statistics", http.StatusInternalServerError)
+		return
+	}
+
+	// Return the statistics
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+}

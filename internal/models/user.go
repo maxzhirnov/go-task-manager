@@ -19,6 +19,17 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type UserStatistics struct {
+	UserID            int    `json:"user_id"`
+	Username          string `json:"username"`
+	TotalTasks        int    `json:"total_tasks"`
+	CompletedTasks    int    `json:"completed_tasks"`
+	PendingTasks      int    `json:"pending_tasks"`
+	InProgressTasks   int    `json:"in_progress_tasks"`
+	DeletedTasks      int    `json:"deleted_tasks"`
+	TasksCreatedToday int    `json:"tasks_created_today"`
+}
+
 // HashPassword hashes the user's password
 func (u *User) HashPassword() error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
@@ -94,4 +105,26 @@ func GetUserByUsername(db database.DB, username string) (User, error) {
 		return user, fmt.Errorf("invalid password hash")
 	}
 	return user, nil
+}
+
+func GetUserStatistics(db database.DB, userID int) (*UserStatistics, error) {
+	stats := &UserStatistics{}
+	query := `
+        SELECT 
+            user_id, username, total_tasks, completed_tasks,
+            pending_tasks, in_progress_tasks, deleted_tasks,
+            tasks_created_today
+        FROM user_statistics
+        WHERE user_id = $1`
+
+	err := db.QueryRow(query, userID).Scan(
+		&stats.UserID, &stats.Username, &stats.TotalTasks,
+		&stats.CompletedTasks, &stats.PendingTasks,
+		&stats.InProgressTasks, &stats.DeletedTasks,
+		&stats.TasksCreatedToday,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return stats, nil
 }

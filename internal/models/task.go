@@ -12,6 +12,7 @@ const (
 	StatusPending    = "pending"
 	StatusInProgress = "in_progress"
 	StatusCompleted  = "completed"
+	StatusDeleted    = "deleted"
 )
 
 var ValidStatuses = []string{StatusPending, StatusInProgress, StatusCompleted}
@@ -31,6 +32,7 @@ func GetTasks(db database.DB, userID int) ([]Task, error) {
 	query := `SELECT id, title, description, status, user_id, position, created_at, updated_at 
               FROM tasks 
               WHERE user_id = $1 
+			  AND status != 'deleted'
               ORDER BY position ASC`
 	rows, err := db.Query(query, userID)
 	if err != nil {
@@ -178,8 +180,12 @@ func (t *Task) ValidateStatus() error {
 }
 
 func DeleteTask(db database.DB, id int) error {
-	query := `DELETE FROM tasks WHERE id = $1`
-	result, err := db.Exec(query, id)
+	query := `
+        UPDATE tasks 
+        SET status = 'deleted', updated_at = $1 
+        WHERE id = $2
+    `
+	result, err := db.Exec(query, time.Now(), id)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,14 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': 'http://localhost:8080'
+        },
+        fs: {
+            strict: false
+        },
+        headers: {
+            '*.css': {
+                'Content-Type': 'text/css'
+            }
         }
     }
 });

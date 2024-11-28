@@ -20,5 +20,4 @@
     <title>Task Statistics</title>
 </svelte:head>
 
-<Header />
 <UserStatistics {statistics} />

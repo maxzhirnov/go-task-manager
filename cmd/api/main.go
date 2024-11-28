@@ -54,8 +54,6 @@ func setupRouter() *mux.Router {
 		httpSwagger.DeepLinking(true),
 	))
 
-	// r.PathPrefix("/").Handler(http.FileServer(http.Dir("./web")))
-
 	// Static files for Svelte assets (CSS, JS)
 	r.PathPrefix("/_app/").Handler(http.FileServer(http.Dir("./frontend/build")))
 	r.PathPrefix("/assets/").Handler(http.FileServer(http.Dir("./frontend/build")))

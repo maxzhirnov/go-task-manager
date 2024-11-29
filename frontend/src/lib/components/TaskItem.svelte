@@ -3,7 +3,7 @@
     import { tasks } from '../stores.js';
     import { showError } from '$lib/stores.js';
     import { dragHandle } from 'svelte-dnd-action';
-    
+    import { mdiPencil, mdiDelete } from '@mdi/js';
 
     export let task;
     let isEditing = false;
@@ -92,11 +92,17 @@
             </div>
             <div class="task-actions">
                 <div class="edit-actions">
+                    <!-- svelte-ignore a11y_consider_explicit_label -->
                     <button class="edit-btn" on:click={() => isEditing = true}>
-                        Edit
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="currentColor" d={mdiPencil} />
+                        </svg>
                     </button>
+                    <!-- svelte-ignore a11y_consider_explicit_label -->
                     <button class="delete-btn" on:click={handleDelete}>
-                        Delete
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="currentColor" d={mdiDelete} />
+                        </svg>
                     </button>
                 </div>
                 <div class="edit-status">
@@ -149,6 +155,7 @@
 
     .edit-actions {
         display: flex;
+        justify-content: center;
         gap: 10px;
     }
 
@@ -207,11 +214,6 @@
         resize: vertical;
     }
 
-    .edit-actions {
-        display: flex;
-        gap: 10px;
-    }
-
     .character-count {
         font-size: 12px;
         color: #666;
@@ -227,6 +229,18 @@
         border-radius: 4px;
         cursor: pointer;
         font-size: 14px;
+    }
+
+    .edit-btn, .delete-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+    }
+    
+    svg {
+        width: 20px;
+        height: 20px;
     }
 
     .save-btn {
@@ -248,6 +262,7 @@
         background-color: #f44336;
         color: white;
     }
+
 
     .drag-handle {
         cursor: grab;
@@ -274,11 +289,20 @@
         }
 
         .task-actions {
+            display: flex;
             padding-left: 15px;
+        }
+
+        .edit-status {
+            margin-top: 0;
+            width: 100%;
+            order: 1;
+            padding-right: 1rem;
         }
 
         .edit-actions {
             justify-content: center;
+            order: 2;
         }
 
         .edit-actions button {

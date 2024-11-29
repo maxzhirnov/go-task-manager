@@ -15,9 +15,9 @@
     let selectedStatus = 'active'; // Default to active tasks
     const statusOptions = [
         { value: 'active', label: 'Active' },  // "Active" means all except completed
-        { value: 'all', label: 'All' },
         { value: 'pending', label: 'Pending' },
         { value: 'in_progress', label: 'In Progress' },
+        { value: 'all', label: 'All' },
         { value: 'completed', label: 'Completed' }
     ];
 
@@ -37,11 +37,12 @@
     });
 
     function handleDndConsider(e) {
-        // Only update positions within the filtered view
         const updatedTasks = [...$tasks];
-        const filteredIndices = $tasks.map((task, index) => 
-            selectedStatus === 'all' || task.status === selectedStatus ? index : -1
-        ).filter(index => index !== -1);
+        const filteredIndices = $tasks.map((task, index) => {
+            if (selectedStatus === 'all') return index;
+            if (selectedStatus === 'active') return task.status !== 'completed' ? index : -1;
+            return task.status === selectedStatus ? index : -1;
+        }).filter(index => index !== -1);
 
         e.detail.items.forEach((task, newFilteredIndex) => {
             updatedTasks[filteredIndices[newFilteredIndex]] = task;
@@ -51,10 +52,17 @@
     }
 
     async function handleDndFinalize(e) {
-        const newTasks = [...$tasks];
         const positions = {};
         
-        newTasks.forEach((task, index) => {
+        // Get only the visible tasks based on current filter
+        const visibleTasks = selectedStatus === 'active' 
+            ? $tasks.filter(task => task.status !== 'completed')
+            : selectedStatus === 'all' 
+                ? $tasks 
+                : $tasks.filter(task => task.status === selectedStatus);
+
+        // Update positions only for visible tasks
+        visibleTasks.forEach((task, index) => {
             positions[task.id] = index;
         });
 
@@ -102,16 +110,22 @@
         margin-bottom: 1rem;
     }
 
-    select {
+    .filter-container select {
         padding: 8px;
         border-radius: 4px;
         border: 1px solid #ddd;
         font-size: 14px;
-        width: 200px;
+        width: 150px;
     }
 
     select:focus {
         outline: none;
         border-color: #2196F3;
+    }
+
+    @media screen and (max-width: 600px) {
+        .filter-container select {
+            width: 100%;
+        }
     }
 </style>

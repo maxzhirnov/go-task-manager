@@ -3,7 +3,7 @@
     import { tasks } from '../stores.js';
     import { showError } from '$lib/stores.js';
     import { dragHandle } from 'svelte-dnd-action';
-    import { mdiPencil, mdiDelete } from '@mdi/js';
+    import { mdiPencil, mdiDelete, mdiCheck } from '@mdi/js';
 
     export let task;
     let isEditing = false;
@@ -92,16 +92,19 @@
             </div>
             <div class="task-actions">
                 <div class="edit-actions">
-                    <!-- svelte-ignore a11y_consider_explicit_label -->
-                    <button class="edit-btn" on:click={() => isEditing = true}>
+                    <button class="edit-btn" aria-label="Edit task" title="Edit task" on:click={() => isEditing = true}>
                         <svg viewBox="0 0 24 24" width="24" height="24">
                             <path fill="currentColor" d={mdiPencil} />
                         </svg>
                     </button>
-                    <!-- svelte-ignore a11y_consider_explicit_label -->
-                    <button class="delete-btn" on:click={handleDelete}>
+                    <button class="delete-btn" aria-label="Delete task" title="Delete task" on:click={handleDelete}>
                         <svg viewBox="0 0 24 24" width="24" height="24">
                             <path fill="currentColor" d={mdiDelete} />
+                        </svg>
+                    </button>
+                    <button class="complete-btn" aria-label="Complete task" title="Complete task" on:click={() => handleStatusChange("completed")}>
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="currentColor" d={mdiCheck} />
                         </svg>
                     </button>
                 </div>
@@ -151,6 +154,21 @@
 
     .task-content p {
         margin: 0 0 .7rem 0;
+    }
+
+    .task-text h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2c3e50;
+        letter-spacing: 0.3px;
+        line-height: 1.4;
+    }
+
+    .task-text p {
+        font-size: 0.8rem;
+        line-height: 1.6;
+        color: #6d6c6c;
+        letter-spacing: 0.5px;
     }
 
     .edit-actions {
@@ -223,7 +241,8 @@
     .save-btn,
     .cancel-btn,
     .edit-btn,
-    .delete-btn {
+    .delete-btn,
+    .complete-btn {
         padding: 8px 16px;
         border: none;
         border-radius: 4px;
@@ -231,7 +250,7 @@
         font-size: 14px;
     }
 
-    .edit-btn, .delete-btn {
+    .edit-btn, .delete-btn, .complete-btn {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -252,9 +271,25 @@
         background-color: #757575;
         color: white;
     }
+    
+
+    .complete-btn {
+        background-color: #32cd32;
+        color: white;
+    }
+
+    .complete-btn:hover {
+        background-color: #29a629;
+        color: white;
+    }
 
     .edit-btn {
         background-color: #2196F3;
+        color: white;
+    }
+
+    .edit-btn:hover {
+        background-color: #1b79c6;
         color: white;
     }
 
@@ -263,6 +298,10 @@
         color: white;
     }
 
+    .delete-btn:hover {
+        background-color: #c7352a;
+        color: white;
+    }
 
     .drag-handle {
         cursor: grab;

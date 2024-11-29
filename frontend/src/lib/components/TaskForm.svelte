@@ -26,7 +26,7 @@
 
 <div class="task-creation-container">
     {#if !showForm}
-        <button class="show-form-btn" on:click={() => showForm = true}>
+        <button class="show-form-btn" aria-label="Create task" title="Open new task creation form" on:click={() => showForm = true}>
             Create Task
         </button>
     {:else}
@@ -37,9 +37,10 @@
                 placeholder="Task Title" 
                 required
                 maxlength="100"
+                name="title"
             />
             <span class="character-count">({title.length}/100)</span>
-            <textarea bind:value={description} placeholder="Task Description"></textarea>
+            <textarea bind:value={description} placeholder="Task Description" name="description"></textarea>
             <select bind:value={status} required>
                 <option value="pending">Pending</option>
                 <option value="in_progress">In Progress</option>
@@ -47,7 +48,7 @@
             </select>
             <div class="task-form-buttons">
                 <button class="btn-add" type="submit">Add Task</button>
-                <button class="btn-cancel" on:click={() => showForm = false}>Cancel</button>
+                <button class="btn-cancel" type="button" on:click={() => showForm = false}>Cancel</button>
             </div>
         </form>
     {/if}
@@ -78,11 +79,12 @@
         border-radius: 4px;
         cursor: pointer;
         font-size: 16px;
-        width: 150px;
+        width: 182px;
     }
 
     .task-form-buttons {
         display: flex;
+        justify-content: flex-end;
         gap: .5rem;
     }
 

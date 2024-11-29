@@ -7,6 +7,7 @@
     import { showError } from '$lib/stores.js';
     import { onMount } from 'svelte';
     import {flip} from "svelte/animate";
+    import { mdiFilter } from '@mdi/js';
 
     const flipDurationMs = 300;
     const dragDisabled = false;
@@ -77,51 +78,79 @@
         }
     }
 </script>
+<div class="task-list-container">
+    <div class="filter-container">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+            <path fill="currentColor" d={mdiFilter} />
+        </svg>
+        <select bind:value={selectedStatus}>
+            {#each statusOptions as option}
+                <option value={option.value}>
+                    {option.label}
+                </option>
+            {/each}
+        </select>
+    </div>
 
-<div class="filter-container">
-    <select bind:value={selectedStatus}>
-        {#each statusOptions as option}
-            <option value={option.value}>{option.label}</option>
+    <section
+        use:dragHandleZone={{
+            items: filteredTasks,
+            flipDurationMs,
+        }}
+        on:consider={handleDndConsider}
+        on:finalize={handleDndFinalize}
+    >
+        {#each filteredTasks as task (task.id)}
+            <div class="task-wrapper" animate:flip="{{ duration: flipDurationMs }}">
+                <TaskItem {task} />
+            </div>
         {/each}
-    </select>
+    </section>
 </div>
-
-<section
-    use:dragHandleZone={{
-        items: filteredTasks,
-        flipDurationMs,
-    }}
-    on:consider={handleDndConsider}
-    on:finalize={handleDndFinalize}
->
-    {#each filteredTasks as task (task.id)}
-        <div class="task-wrapper" animate:flip="{{ duration: flipDurationMs }}">
-            <TaskItem {task} />
-        </div>
-    {/each}
-</section>
-
 <style>
+    .task-list-container {
+        margin-top: 2.5rem;
+    }
+
     .task-wrapper {
         width: 100%;
     }
 
     .filter-container {
+        display: flex;
         margin-bottom: 1rem;
+        align-items: center;
+        gap: 8px;
     }
 
     .filter-container select {
-        padding: 8px;
-        border-radius: 4px;
-        border: 1px solid #ddd;
-        font-size: 14px;
         width: 150px;
+        appearance: none;
+        padding: 8px 32px 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 12px top 50%;
+        background-size: 12px auto;
+        font-size: 14px;
+        cursor: pointer;
+        transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    select:focus {
+    .filter-container select:hover {
+        border-color: #aaa;
+    }
+
+    .filter-container select:focus {
         outline: none;
         border-color: #2196F3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
     }
+
+    .filter-container select option {
+        padding: 8px;
+        background-color: white;
+    }
+
 
     @media screen and (max-width: 600px) {
         .filter-container select {

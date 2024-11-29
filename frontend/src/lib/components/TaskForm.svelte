@@ -1,11 +1,17 @@
 <script>
+    import { browser } from '$app/environment';
     import { api } from '../api.js';
     import { tasks } from '../stores.js';
 
-    let showForm = false;
     let title = '';
     let description = '';
     let status = 'pending';
+
+    let showForm = browser ? JSON.parse(localStorage.getItem('showForm') || 'false') : false;
+
+    $: if (browser) {
+        localStorage.setItem('showForm', JSON.stringify(showForm));
+    }
 
     async function handleSubmit() {
         if (title.length > 100) {

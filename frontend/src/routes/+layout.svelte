@@ -28,6 +28,7 @@
 <style>
     :global(body) {
         font-family: Helvetica, Arial, sans-serif;
+        box-sizing: border-box;
         max-width: 800px;
         margin: 0 auto;
         padding: 20px;

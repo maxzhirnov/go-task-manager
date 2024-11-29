@@ -1,5 +1,6 @@
 <!-- TaskList.svelte -->
 <script>
+    import { browser } from '$app/environment';
     import { dragHandleZone } from 'svelte-dnd-action';
     import { tasks } from '../stores.js';
     import TaskItem from './TaskItem.svelte';
@@ -12,8 +13,12 @@
     const flipDurationMs = 300;
     const dragDisabled = false;
 
-    // Add status filter
-    let selectedStatus = 'active'; // Default to active tasks
+    let selectedStatus = browser ? localStorage.getItem('selectedStatus') || 'active' : 'active';
+
+    $: if (browser && selectedStatus) {
+        localStorage.setItem('selectedStatus', selectedStatus);
+    }
+
     const statusOptions = [
         { value: 'active', label: 'Active' },  // "Active" means all except completed
         { value: 'pending', label: 'Pending' },

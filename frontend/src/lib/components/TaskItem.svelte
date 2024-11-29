@@ -133,6 +133,7 @@
         justify-content: space-between;
         align-items: flex-start;
         gap: 10px;
+        min-width: 260px;
     }
 
     .task-content-container {

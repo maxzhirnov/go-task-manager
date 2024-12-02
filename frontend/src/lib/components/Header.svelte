@@ -12,8 +12,8 @@
 
 <div class="header-container">
     <div class="title">
-        <a href="/" class="title-link" on:click|preventDefault={() => goto('/')}>
-            <h1>Task Manager</h1>
+        <a href="/tasks" class="title-link" on:click|preventDefault={() => goto('/')}>
+            <h1>ActionHub</h1>
         </a>
     </div>
     <div class="nav-section">

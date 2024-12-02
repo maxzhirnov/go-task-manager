@@ -45,13 +45,18 @@
 <div class="task-creation-container">
     {#if isQuickAdd}
         <div class="quick-add">
-            <input 
-                bind:value={title} 
-                type="text" 
-                placeholder="Quick add task" 
-                on:keydown={(e) => e.key === 'Enter' && handleQuickSubmit()}
-                maxlength="100"
-            />
+            <div class="input-wrapper">
+                <input 
+                    bind:value={title} 
+                    type="text" 
+                    placeholder="Quick add task" 
+                    on:keydown={(e) => e.key === 'Enter' && handleQuickSubmit()}
+                    maxlength="100"
+                />
+                <span class="quick-character-count" class:warning={title.length > 90}>
+                    {title.length}/100
+                </span>
+            </div>
             <div class="quick-add-buttons">
                 <div class="quick-submit-btn-container">
                     <button 
@@ -109,10 +114,9 @@
                     type="button" 
                     on:click={() => {
                         isQuickAdd = true;
-                        title = '';
                     }}
                 >
-                    Cancel
+                    Close
                 </button>
             </div>
         </form>
@@ -121,6 +125,31 @@
 
 
 <style>
+    .input-wrapper {
+        position: relative;
+        flex: 1;
+    }
+
+    .input-wrapper input {
+        width: 100%;
+        padding-right: 60px; /* Make room for the counter */
+    }
+
+    .quick-character-count {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        color: #666;
+        transition: all 0.2s;
+    }
+
+    .quick-character-count.warning {
+        color: #ff4444;
+        font-weight: bold;
+    }
+
     /* Container styles */
     .task-creation-container {
         margin: 3rem 0 1rem 0;
@@ -223,11 +252,11 @@
     }
 
     .btn-cancel {
-        background-color: #f44336;
+        background-color: #7f7f7f;
     }
 
     .btn-cancel:hover {
-        background-color: #dc3c30;
+        background-color: #5d5c5c;
     }
 
     .character-count {
@@ -238,6 +267,10 @@
 
     /* Mobile styles */
     @media screen and (max-width: 600px) {
+        .input-wrapper {
+            width: 100%;
+        }
+
         .task-creation-container {
             margin-top: 0;
             padding: 0;

@@ -155,6 +155,9 @@
         align-items: flex-start;
         flex: 1;
         padding: 0 .7rem 0 0;
+        min-width: 0;  /* Allows flex item to shrink below content size */
+        overflow: hidden;  /* Contains the text overflow */
+        word-wrap: break-word;  /* Breaks long words */
     }
 
     .task-content h3 {
@@ -170,6 +173,7 @@
         flex-direction: column;
         justify-content: space-between;
         height: 100%;
+        
     }
 
     .task-text-content {

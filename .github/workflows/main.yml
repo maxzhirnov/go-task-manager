@@ -18,10 +18,10 @@ jobs:
           go-version: '1.22'
           
       - name: Run tests
-        run: go test -v ./...
-        
-      - name: Run tests with coverage
-        run: go test ./... -coverprofile=coverage.out
+        run: go test ./...
+        shell: bash
+        env:
+          GO111MODULE: on
 
   build-and-push:
     needs: test

@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { api } from '$lib/api';
     import { showError } from '$lib/stores';
+    import LoadingSpinner from './LoadingSpinner.svelte';
 
     export let statistics = null;
 
@@ -18,7 +19,7 @@
 
 <div class="statistics-container">
     {#if !statistics}
-        <p>Loading statistics...</p>
+        <LoadingSpinner/>
     {:else}
         <div class="stats-grid">
             <div class="stat-card">

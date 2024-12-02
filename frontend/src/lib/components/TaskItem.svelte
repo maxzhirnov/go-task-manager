@@ -4,8 +4,11 @@
     import { showError } from '$lib/stores.js';
     import { dragHandle } from 'svelte-dnd-action';
     import { mdiPencil, mdiDelete, mdiCheck } from '@mdi/js';
-
+    import Time from "svelte-time";
+    import FormattedTime from './FormattedTime.svelte';
+    
     export let task;
+
     let isEditing = false;
     let editTitle = task.title;
     let editDescription = task.description;
@@ -86,8 +89,13 @@
             <div class="task-content">
                 <div class="drag-handle" use:dragHandle>⋮⋮</div>
                 <div class="task-text">
-                    <h3>{task.title}</h3>
-                    <p>{task.description}</p>
+                    <div class="task-text-content">
+                        <h3>{task.title}</h3>
+                        <p>{task.description}</p>
+                    </div>
+                    <div class="task-text-footer">
+                        <FormattedTime timestamp={task.created_at} />
+                    </div>
                 </div>
             </div>
             <div class="task-actions">
@@ -157,7 +165,24 @@
         margin: 0 0 .7rem 0;
     }
 
-    .task-text h3 {
+    .task-text {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+
+    .task-text-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .task-text-footer {
+        margin-top: auto;
+    }
+
+    .task-text .task-text-content h3 {
         font-size: 1.2rem;
         font-weight: 600;
         color: #2c3e50;
@@ -165,7 +190,7 @@
         line-height: 1.4;
     }
 
-    .task-text p {
+    .task-text .task-text-content p {
         font-size: 0.8rem;
         line-height: 1.6;
         color: #6d6c6c;
@@ -329,6 +354,7 @@
         }
 
         .task-actions {
+            margin-top: 8px;
             display: flex;
             padding-left: 15px;
         }

@@ -9,7 +9,9 @@
     import { onMount } from 'svelte';
     import {flip} from "svelte/animate";
     import { mdiFilter } from '@mdi/js';
+    import LoadingSpinner from './LoadingSpinner.svelte';
 
+    let isLoading = true; //
     const flipDurationMs = 300;
     const dragDisabled = false;
 
@@ -35,10 +37,13 @@
 
     onMount(async () => {
         try {
+            isLoading = true;
             const fetchedTasks = await api.fetchTasks();
             tasks.set(fetchedTasks);
         } catch (error) {
             showError('Failed to load tasks');
+        }  finally {
+            isLoading = false;
         }
     });
 
@@ -96,22 +101,26 @@
             {/each}
         </select>
     </div>
+    {#if isLoading}
+        <LoadingSpinner/>
+    {:else}
+        <section
+            use:dragHandleZone={{
+                items: filteredTasks,
+                flipDurationMs,
+            }}
+            on:consider={handleDndConsider}
+            on:finalize={handleDndFinalize}
+        >
+            {#each filteredTasks as task (task.id)}
+                <div class="task-wrapper" animate:flip="{{ duration: flipDurationMs }}">
+                    <TaskItem {task} />
+                </div>
+            {/each}
+        </section>
+    {/if}
+    </div>
 
-    <section
-        use:dragHandleZone={{
-            items: filteredTasks,
-            flipDurationMs,
-        }}
-        on:consider={handleDndConsider}
-        on:finalize={handleDndFinalize}
-    >
-        {#each filteredTasks as task (task.id)}
-            <div class="task-wrapper" animate:flip="{{ duration: flipDurationMs }}">
-                <TaskItem {task} />
-            </div>
-        {/each}
-    </section>
-</div>
 <style>
     .task-list-container {
         margin-top: 2.5rem;

@@ -52,27 +52,34 @@
                 on:keydown={(e) => e.key === 'Enter' && handleQuickSubmit()}
                 maxlength="100"
             />
-            <button 
-                class="quick-submit-btn" 
-                title="Add task"
-                aria-label="Add tas"
-                on:click={handleQuickSubmit}
-                disabled={!title.trim()}
-            >
-                <svg viewBox="0 0 24 24" width="24" height="24">
-                    <path fill="currentColor" d={mdiPlus} />
-                </svg>
-            </button>
-            <button 
-                class="expand-btn" 
-                title="Show full form"
-                aria-label="Show full form"
-                on:click={() => isQuickAdd = false}
-            >
-                <svg viewBox="0 0 24 24" width="24" height="24">
-                    <path fill="currentColor" d={mdiChevronDown} />
-                </svg>
-            </button>
+            <div class="quick-add-buttons">
+                <div class="quick-submit-btn-container">
+                    <button 
+                    class="quick-submit-btn" 
+                    title="Add task"
+                    aria-label="Add task"
+                    on:click={handleQuickSubmit}
+                    disabled={!title.trim()}
+                >
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d={mdiPlus} />
+                    </svg>
+                </button>
+                </div>
+                
+                <div>
+                    <button 
+                        class="expand-btn" 
+                        title="Show full form"
+                        aria-label="Show full form"
+                        on:click={() => isQuickAdd = false}
+                    >
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="currentColor" d={mdiChevronDown} />
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
     {:else}
         <form class="task-form" on:submit|preventDefault={handleFullSubmit}>
@@ -114,43 +121,54 @@
 
 
 <style>
+    /* Container styles */
     .task-creation-container {
         margin: 3rem 0 1rem 0;
     }
 
+    /* Common form element styles */
+    input, textarea, select {
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        box-sizing: border-box;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    /* Quick add section */
     .quick-add {
         display: flex;
         gap: 8px;
         align-items: center;
     }
 
-    input, textarea, select {
-        flex: 1;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 16px;
-        transition: border-color 0.2s, box-shadow 0.2s;
+    .quick-add-buttons {
+        gap: 8px;
+        display: flex;
     }
 
+    .quick-add input {
+        flex: 1;
+    }
+
+    /* Action buttons */
     .quick-submit-btn,
     .expand-btn {
-        padding: 8px;
-        background: none;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
         min-width: 42px;
         height: 42px;
+        padding: 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
     }
 
     .quick-submit-btn {
         background-color: #4CAF50;
-        border-color: #4CAF50;
+        border: 1px solid #4CAF50;
         color: white;
     }
 
@@ -163,20 +181,22 @@
         cursor: not-allowed;
     }
 
+    .expand-btn {
+        background: none;
+        border: 1px solid #ddd;
+    }
+
     .expand-btn:hover {
         background: #f5f5f5;
         border-color: #aaa;
     }
 
+    /* Full form styles */
     .task-form {
         display: flex;
         flex-direction: column;
         gap: 10px;
         margin-top: 20px;
-    }
-
-    .task-form input, .task-form textarea, .task-form button, .task-form select {
-        padding: 8px;
     }
 
     .task-form-buttons {
@@ -186,27 +206,27 @@
     }
 
     .task-form button {
-        background-color: #4CAF50;
-        color: white;
+        min-width: 100px;
+        padding: 8px;
         border: none;
         border-radius: 4px;
+        color: white;
         cursor: pointer;
-        min-width: 100px;
     }
 
-    .task-form .btn-add {
+    .btn-add {
         background-color: #4CAF50;
     }
 
-    .task-form .btn-cancel {
-        background-color: #f44336;
-    }
-
-    .task-form .btn-add:hover {
+    .btn-add:hover {
         background-color: #45a049;
     }
 
-    .task-form .btn-cancel:hover {
+    .btn-cancel {
+        background-color: #f44336;
+    }
+
+    .btn-cancel:hover {
         background-color: #dc3c30;
     }
 
@@ -216,24 +236,42 @@
         margin-left: 5px;
     }
 
+    /* Mobile styles */
     @media screen and (max-width: 600px) {
         .task-creation-container {
             margin-top: 0;
+            padding: 0;
         }
 
         .quick-add {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: 8px;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin: 0;
         }
 
         .quick-add input {
-            grid-column: 1 / -1;
+            width: 100%;
+        }
+
+        .quick-add-buttons {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            gap: 8px;
+        }
+
+        .quick-submit-btn-container {
+            flex: 1;
+        }
+
+        .quick-submit-btn-container button {
+            width: 100%;
         }
 
         .quick-submit-btn,
         .expand-btn {
-            height: 38px;
+            height: 44.5px;
         }
     }
 </style>

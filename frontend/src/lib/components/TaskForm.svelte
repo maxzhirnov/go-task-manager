@@ -88,15 +88,21 @@
         </div>
     {:else}
         <form class="task-form" on:submit|preventDefault={handleFullSubmit}>
-            <input 
-                bind:value={title} 
-                type="text" 
-                placeholder="Task Title" 
-                required
-                maxlength="100"
-                name="title"
-            />
-            <span class="character-count">({title.length}/100)</span>
+            <div class="input-wrapper">
+                <input 
+                    bind:value={title} 
+                    type="text" 
+                    placeholder="Task Title" 
+                    required
+                    maxlength="100"
+                    name="title"
+                    on:keydown={(e) => e.key === 'Enter' && handleFullSubmit()}
+                />
+                <span class="quick-character-count" class:warning={title.length > 90}>
+                    {title.length}/100
+                </span>
+            </div>
+
             <textarea 
                 bind:value={description} 
                 placeholder="Task Description" 
@@ -108,7 +114,7 @@
                 <option value="completed">Completed</option>
             </select>
             <div class="task-form-buttons">
-                <button class="btn-add" type="submit">Add Task</button>
+                <button class="btn-add" type="submit">Add</button>
                 <button 
                     class="btn-cancel" 
                     type="button" 
@@ -156,13 +162,44 @@
     }
 
     /* Common form element styles */
-    input, textarea, select {
+    .task-form input, .task-form textarea, .input-wrapper input {
+        font-family: Arial, Helvetica, sans-serif;
         padding: 12px;
         border: 1px solid #ddd;
         border-radius: 4px;
         font-size: 16px;
         box-sizing: border-box;
         transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .task-form select {
+        width: 100%;
+        font-size: 16px;
+        appearance: none;
+        padding: 8px 32px 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 12px top 50%;
+        background-size: 12px auto;
+        font-size: 14px;
+        cursor: pointer;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        width: 100%;
+    }
+
+    .task-form select:hover {
+        border-color: #aaa;
+    }
+
+    .task-form select:focus {
+        outline: none;
+        border-color: #2196F3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+    }
+
+    .task-form select option {
+        padding: 8px;
+        background-color: white;
     }
 
     /* Quick add section */
@@ -236,7 +273,7 @@
 
     .task-form button {
         min-width: 100px;
-        padding: 8px;
+        padding: 12px;
         border: none;
         border-radius: 4px;
         color: white;
@@ -244,7 +281,7 @@
     }
 
     .btn-add {
-        background-color: #4CAF50;
+        background-color: #32cd32;
     }
 
     .btn-add:hover {

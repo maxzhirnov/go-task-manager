@@ -3,8 +3,9 @@
     import { dayjs } from "svelte-time";
     
     export let timestamp;
-    const sevenDaysInMs = 3 * 24 * 60 * 60 * 1000;
-    $: isWithinSevenDays = (Date.now() - new Date(timestamp).getTime()) < sevenDaysInMs;
+    export let daysToReRelative = 7;
+    const daysInMs = daysToReRelative * 24 * 60 * 60 * 1000;
+    $: isWithinDays = (Date.now() - new Date(timestamp).getTime()) < daysInMs;
     
     // Check if the year is current
     $: isCurrentYear = new Date(timestamp).getFullYear() === new Date().getFullYear();
@@ -12,7 +13,7 @@
     </script>
     
     <div class="timestamp">
-        {#if isWithinSevenDays}
+        {#if isWithinDays}
             <Time relative live timestamp={timestamp} />
         {:else}
             <Time timestamp={timestamp} {format} />
@@ -35,7 +36,5 @@
                 color: #999;
             }
             
-            .timestamp:hover {
-            }
         }
         </style>

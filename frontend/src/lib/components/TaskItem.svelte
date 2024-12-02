@@ -94,7 +94,7 @@
                         <p>{task.description}</p>
                     </div>
                     <div class="task-text-footer">
-                        <FormattedTime timestamp={task.created_at} />
+                        <FormattedTime timestamp={task.created_at} daysToReRelative={7} />
                     </div>
                 </div>
             </div>

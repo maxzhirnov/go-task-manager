@@ -397,6 +397,11 @@
     }
 
     @media (max-width: 768px) {
+        .hero {
+            padding: 40px 20px 20px;
+            margin-bottom: 12px;
+        }
+
         .hero h1 {
             font-size: 2.5rem;
         }
@@ -415,9 +420,15 @@
         }
 
         .btn {
-            width: 100%;
+            /* width: 100%; */
             max-width: 300px;
             text-align: center;
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0);
+            color: #4CAF50;
+            border: none;
         }
 
         .stats {

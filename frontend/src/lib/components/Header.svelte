@@ -12,13 +12,13 @@
 
 <div class="header-container">
     <div class="title">
-        <a href="/tasks" class="title-link" on:click|preventDefault={() => goto('/')}>
+        <a href="/tasks" class="title-link" on:click|preventDefault={() => goto('/tasks')}>
             <h1>ActionHub</h1>
         </a>
     </div>
     <div class="nav-section">
         <nav class="nav-links">
-            <a class="nav-link" class:active={$page.url.pathname === '/'} href="/" on:click|preventDefault={() => goto('/')}>Tasks</a>
+            <a class="nav-link" class:active={$page.url.pathname === '/'} href="/" on:click|preventDefault={() => goto('/tasks')}>Tasks</a>
             <a class="nav-link" class:active={$page.url.pathname === '/statistics'} href="/statistics" on:click|preventDefault={() => goto('/statistics')}>Statistics</a>
         </nav>
     </div>

@@ -63,15 +63,15 @@
 				
 				<option value="file3">github.com/maxzhirnov/go-task-manager/internal/handlers/auth_handler.go (63.6%)</option>
 				
-				<option value="file4">github.com/maxzhirnov/go-task-manager/internal/handlers/task_handler.go (77.4%)</option>
+				<option value="file4">github.com/maxzhirnov/go-task-manager/internal/handlers/task_handler.go (70.1%)</option>
 				
 				<option value="file5">github.com/maxzhirnov/go-task-manager/internal/handlers/utils.go (100.0%)</option>
 				
 				<option value="file6">github.com/maxzhirnov/go-task-manager/internal/middleware/jwt.go (90.0%)</option>
 				
-				<option value="file7">github.com/maxzhirnov/go-task-manager/internal/models/task.go (95.7%)</option>
+				<option value="file7">github.com/maxzhirnov/go-task-manager/internal/models/task.go (97.1%)</option>
 				
-				<option value="file8">github.com/maxzhirnov/go-task-manager/internal/models/user.go (86.5%)</option>
+				<option value="file8">github.com/maxzhirnov/go-task-manager/internal/models/user.go (74.4%)</option>
 				
 				<option value="file9">github.com/maxzhirnov/go-task-manager/pkg/database/database.go (0.0%)</option>
 				
@@ -135,13 +135,13 @@ func setupRouter() *mux.Router <span class="cov0" title="0">{
         api.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods("PUT")
         api.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
 
+        api.HandleFunc("/users/statistics", taskHandler.GetUserStatistics).Methods("GET")
+
         // Swagger documentation
         r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
                 httpSwagger.URL("/swagger/doc.json"),
                 httpSwagger.DeepLinking(true),
         ))
-
-        // r.PathPrefix("/").Handler(http.FileServer(http.Dir("./web")))
 
         // Static files for Svelte assets (CSS, JS)
         r.PathPrefix("/_app/").Handler(http.FileServer(http.Dir("./frontend/build")))
@@ -182,14 +182,37 @@ const (
         thisFileName = "collect_source.go"
 )
 
-// Конфигурация расширений файлов для парсинга
-var fileExtensions = []string{
-        ".go",
-        ".html",
-        ".sql",
-        ".svelte",
-        ".js",
-        // Можно добавить другие расширения
+var (
+        // Конфигурация расширений файлов для парсинга
+        fileExtensions = []string{
+                ".go",
+                ".html",
+                ".sql",
+                ".svelte",
+                ".js",
+                // Можно добавить другие расширения
+        }
+
+        // Директории для исключения
+        excludedDirs = []string{
+                ".git",
+                "vendor",
+                "node_modules",
+                "dist",
+                "build",
+                "coverage",
+                ".next",
+        }
+)
+
+// Helper function to check if directory should be excluded
+func shouldExcludeDir(name string) bool <span class="cov0" title="0">{
+        for _, dir := range excludedDirs </span><span class="cov0" title="0">{
+                if name == dir </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+        }
+        <span class="cov0" title="0">return false</span>
 }
 
 func main() <span class="cov0" title="0">{
@@ -204,6 +227,7 @@ func main() <span class="cov0" title="0">{
         fmt.Fprintf(f, "Project Source Code Export\n")
         fmt.Fprintf(f, "Generated: %s\n", time.Now().Format("2006-01-02 15:04:05"))
         fmt.Fprintf(f, "Parsing extensions: %v\n", fileExtensions)
+        fmt.Fprintf(f, "Excluded directories: %v\n", excludedDirs)
         fmt.Fprintf(f, "Working Directory: %s\n", getCurrentDir())
         fmt.Fprintf(f, "\n"+strings.Repeat("-", 80)+"\n\n")
 
@@ -222,6 +246,13 @@ func main() <span class="cov0" title="0">{
                         return err
                 }</span>
 
+                // Check for excluded directories
+                <span class="cov0" title="0">for _, dir := range excludedDirs </span><span class="cov0" title="0">{
+                        if strings.Contains(path, dir+string(os.PathSeparator)) </span><span class="cov0" title="0">{
+                                return filepath.SkipDir
+                        }</span>
+                }
+
                 // Пропускаем директории
                 <span class="cov0" title="0">if info.IsDir() </span><span class="cov0" title="0">{
                         return nil
@@ -229,11 +260,6 @@ func main() <span class="cov0" title="0">{
 
                 // Пропускаем файл самого скрипта
                 <span class="cov0" title="0">if strings.HasSuffix(path, thisFileName) </span><span class="cov0" title="0">{
-                        return nil
-                }</span>
-
-                // Пропускаем файлы в .git и vendor директориях
-                <span class="cov0" title="0">if strings.Contains(path, ".git/") || strings.Contains(path, "vendor/") </span><span class="cov0" title="0">{
                         return nil
                 }</span>
 
@@ -284,8 +310,8 @@ func printProjectTree(f *os.File, path string, level int, isLast map[string]bool
         }</span>
 
         <span class="cov0" title="0">for i, file := range files </span><span class="cov0" title="0">{
-                // Пропускаем .git и vendor директории
-                if file.Name() == ".git" || file.Name() == "vendor" </span><span class="cov0" title="0">{
+                // Skip excluded directories
+                if shouldExcludeDir(file.Name()) </span><span class="cov0" title="0">{
                         continue</span>
                 }
 
@@ -837,6 +863,46 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/users/statistics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get statistics for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserStatistics"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -908,6 +974,35 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UserStatistics": {
+            "type": "object",
+            "properties": {
+                "completed_tasks": {
+                    "type": "integer"
+                },
+                "deleted_tasks": {
+                    "type": "integer"
+                },
+                "in_progress_tasks": {
+                    "type": "integer"
+                },
+                "pending_tasks": {
+                    "type": "integer"
+                },
+                "tasks_created_today": {
+                    "type": "integer"
+                },
+                "total_tasks": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
                 },
                 "username": {
                     "type": "string"
@@ -1425,6 +1520,37 @@ func (h *TaskHandler) UpdateTaskPositions(w http.ResponseWriter, r *http.Request
         <span class="cov8" title="1">w.WriteHeader(http.StatusOK)
         json.NewEncoder(w).Encode(map[string]string{"message": "Positions updated successfully"})</span>
 }
+
+// @Summary Get user statistics
+// @Description Get statistics for the authenticated user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.UserStatistics
+// @Failure 401 {object} models.ErrorResponse "Unauthorized"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /users/statistics [get]
+func (h *TaskHandler) GetUserStatistics(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        // Get the user_id from the JWT claims
+        claims, ok := r.Context().Value("claims").(*middleware.Claims)
+        if !ok </span><span class="cov0" title="0">{
+                JSONError(w, "Unauthorized", http.StatusUnauthorized)
+                return
+        }</span>
+
+        // Get statistics for the user
+        <span class="cov0" title="0">stats, err := models.GetUserStatistics(h.DB, claims.UserID)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("Error fetching user statistics: %v", err)
+                JSONError(w, "Failed to fetch user statistics", http.StatusInternalServerError)
+                return
+        }</span>
+
+        // Return the statistics
+        <span class="cov0" title="0">w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(stats)</span>
+}
 </pre>
 		
 		<pre class="file" id="file5" style="display: none">package handlers
@@ -1577,6 +1703,7 @@ const (
         StatusPending    = "pending"
         StatusInProgress = "in_progress"
         StatusCompleted  = "completed"
+        StatusDeleted    = "deleted"
 )
 
 var ValidStatuses = []string{StatusPending, StatusInProgress, StatusCompleted}
@@ -1596,6 +1723,7 @@ func GetTasks(db database.DB, userID int) ([]Task, error) <span class="cov8" tit
         query := `SELECT id, title, description, status, user_id, position, created_at, updated_at 
               FROM tasks 
               WHERE user_id = $1 
+                          AND status != 'deleted'
               ORDER BY position ASC`
         rows, err := db.Query(query, userID)
         if err != nil </span><span class="cov8" title="1">{
@@ -1743,8 +1871,12 @@ func (t *Task) ValidateStatus() error <span class="cov8" title="1">{
 }
 
 func DeleteTask(db database.DB, id int) error <span class="cov8" title="1">{
-        query := `DELETE FROM tasks WHERE id = $1`
-        result, err := db.Exec(query, id)
+        query := `
+        UPDATE tasks 
+        SET status = 'deleted', updated_at = $1 
+        WHERE id = $2
+    `
+        result, err := db.Exec(query, time.Now(), id)
         if err != nil </span><span class="cov0" title="0">{
                 return err
         }</span>
@@ -1754,7 +1886,7 @@ func DeleteTask(db database.DB, id int) error <span class="cov8" title="1">{
                 return err
         }</span>
 
-        <span class="cov8" title="1">if rowsAffected == 0 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if rowsAffected == 0 </span><span class="cov8" title="1">{
                 return fmt.Errorf("task not found")
         }</span>
 
@@ -1781,6 +1913,17 @@ type User struct {
         Password  string    `json:"password,omitempty"`
         CreatedAt time.Time `json:"created_at"`
         UpdatedAt time.Time `json:"updated_at"`
+}
+
+type UserStatistics struct {
+        UserID            int    `json:"user_id"`
+        Username          string `json:"username"`
+        TotalTasks        int    `json:"total_tasks"`
+        CompletedTasks    int    `json:"completed_tasks"`
+        PendingTasks      int    `json:"pending_tasks"`
+        InProgressTasks   int    `json:"in_progress_tasks"`
+        DeletedTasks      int    `json:"deleted_tasks"`
+        TasksCreatedToday int    `json:"tasks_created_today"`
 }
 
 // HashPassword hashes the user's password
@@ -1858,6 +2001,28 @@ func GetUserByUsername(db database.DB, username string) (User, error) <span clas
                 return user, fmt.Errorf("invalid password hash")
         }</span>
         <span class="cov8" title="1">return user, nil</span>
+}
+
+func GetUserStatistics(db database.DB, userID int) (*UserStatistics, error) <span class="cov0" title="0">{
+        stats := &amp;UserStatistics{}
+        query := `
+        SELECT 
+            user_id, username, total_tasks, completed_tasks,
+            pending_tasks, in_progress_tasks, deleted_tasks,
+            tasks_created_today
+        FROM user_statistics
+        WHERE user_id = $1`
+
+        err := db.QueryRow(query, userID).Scan(
+                &amp;stats.UserID, &amp;stats.Username, &amp;stats.TotalTasks,
+                &amp;stats.CompletedTasks, &amp;stats.PendingTasks,
+                &amp;stats.InProgressTasks, &amp;stats.DeletedTasks,
+                &amp;stats.TasksCreatedToday,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return stats, nil</span>
 }
 </pre>
 		

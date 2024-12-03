@@ -31,3 +31,4 @@ docker-compose*
 README.md
 *.md
 .DS_Store
+main

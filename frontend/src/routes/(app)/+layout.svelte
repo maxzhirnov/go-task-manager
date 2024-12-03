@@ -4,11 +4,18 @@
     import { onMount } from 'svelte';
     import { initializeUser } from '$lib/auth.js';
 
+    let appName = "ActionHub";
+    let pageTitle = $$props.title || "Tasks";
+
     onMount(() => {
         // Only initialize user if we're not on login/register pages
         initializeUser();
     })
 </script>
+
+<svelte:head>
+    <title>{pageTitle} | {appName}</title>
+</svelte:head>
 
 <Header />
 <ErrorMessage />

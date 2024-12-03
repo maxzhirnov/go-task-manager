@@ -5,6 +5,7 @@
     import Header from '$lib/components/Header.svelte';
 
     let statistics = null;
+    let title = "Statistics"
 
     onMount(async () => {
         // Check if user is authenticated
@@ -17,7 +18,7 @@
 </script>
 
 <svelte:head>
-    <title>Task Statistics</title>
+    <title>Task Statistics | ActionHub</title>
 </svelte:head>
 
 <UserStatistics {statistics} />

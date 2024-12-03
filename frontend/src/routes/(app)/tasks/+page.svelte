@@ -8,6 +8,10 @@
 
 </script>
 
+<svelte:head>
+  <title>Dashboard | ActionHub</title>
+</svelte:head>
+
 <TaskForm />
 <TaskList />
 

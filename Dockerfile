@@ -20,6 +20,7 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=backend-builder /build/main-* ./
 COPY --from=frontend-builder /frontend/build ./frontend/build
+COPY templates/email ./templates/email
 
 # Create entrypoint script
 RUN echo '#!/bin/sh' > /entrypoint.sh && \

@@ -29,12 +29,16 @@ func setupRouter(cfg *config.Config) *mux.Router {
 	}
 
 	// Initialize email service
-	emailService := email.NewEmailService(
+	emailService, err := email.NewEmailService(
 		cfg.SMTP.Host,
 		cfg.SMTP.Port,
 		cfg.SMTP.Username,
 		cfg.SMTP.Password,
+		cfg.SMTP.BaseURL,
 	)
+	if err != nil {
+		log.Fatalf("Failed to initialize email service: %v", err)
+	}
 
 	r := mux.NewRouter()
 

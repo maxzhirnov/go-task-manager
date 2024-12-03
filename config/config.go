@@ -16,10 +16,15 @@ type Config struct {
 		DBName   string
 	}
 	SMTP struct {
-		Host     string
-		Port     int
-		Username string
-		Password string
+		Host      string
+		Port      int
+		Username  string
+		Password  string
+		FromName  string   // Added for email "From" display name
+		BaseURL   string   // Added for email links
+		Templates struct { // Added for template configuration
+			Path string
+		}
 	}
 	Server struct {
 		Port string
@@ -47,6 +52,9 @@ func LoadConfig() (*Config, error) {
 	config.SMTP.Port = getEnvAsInt("SMTP_PORT", 587)
 	config.SMTP.Username = getEnv("SMTP_USERNAME", "")
 	config.SMTP.Password = getEnv("SMTP_PASSWORD", "")
+	config.SMTP.FromName = getEnv("SMTP_FROM_NAME", "Task Manager")
+	config.SMTP.BaseURL = getEnv("SMTP_BASE_URL", "http://localhost:8080")
+	config.SMTP.Templates.Path = getEnv("SMTP_TEMPLATES_PATH", "templates/email")
 
 	// Server configuration
 	config.Server.Port = getEnv("SERVER_PORT", "8080")

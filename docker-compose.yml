@@ -7,6 +7,8 @@ services:
     # image: maxzhirnov/task-manager:latest
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       - DB_HOST=db
       - DB_PORT=5432
@@ -35,14 +37,14 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-migrate:
-    image: migrate/migrate
-    volumes:
-      - ./migrations:/migrations
-    command: ["-path", "/migrations", "-database", "postgres://postgres:mysecretpassword@db:5432/taskmanager?sslmode=disable", "up"]
-    depends_on:
-      db:
-        condition: service_healthy
+  migrate:
+      image: migrate/migrate
+      volumes:
+        - ./migrations:/migrations
+      command: ["-path", "/migrations", "-database", "postgres://postgres:mysecretpassword@db:5432/taskmanager?sslmode=disable", "up"]
+      depends_on:
+        db:
+          condition: service_healthy
 
 volumes:
   pgdata:

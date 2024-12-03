@@ -4,7 +4,7 @@ dev:
 	docker-compose -f docker-compose.dev.yml up --build
 
 prod:
-	docker-compose up -d --build
+	docker-compose up --build
 
 swagger:
 	swag init --parseDependency --parseInternal -g cmd/api/main.go

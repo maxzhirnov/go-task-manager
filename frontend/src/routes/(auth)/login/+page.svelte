@@ -1,5 +1,5 @@
 <script>
-    let username = '';
+    let email = '';
     let password = '';
     let errorMessage = '';
 
@@ -8,7 +8,7 @@
             const response = await fetch("/api/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({ email, password }),
             });
 
             if (!response.ok) {
@@ -29,7 +29,7 @@
 <div class="container">
     <h1>Login</h1>
     <form on:submit|preventDefault={handleSubmit}>
-        <input type="text" bind:value={username} placeholder="Username" required>
+        <input type="email" bind:value={email} placeholder="Email" required>
         <input type="password" bind:value={password} placeholder="Password" required>
         <button type="submit">Login</button>
     </form>

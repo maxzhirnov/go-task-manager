@@ -9,29 +9,39 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/maxzhirnov/go-task-manager/internal/models"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
+	"github.com/maxzhirnov/go-task-manager/pkg/email"
 )
 
 type AuthHandler struct {
 	DB                   database.DB
+	EmailService         email.EmailSender
 	GenerateJWT          func(userID int, username string) (string, error)
 	GenerateRefreshToken func(userID int, username string) (string, error)
 	ValidateRefreshToken func(token string) (*middleware.Claims, error)
 }
 
-func NewAuthHandler(db database.DB) *AuthHandler {
+func NewAuthHandler(db database.DB, emailService email.EmailSender) *AuthHandler {
 	return &AuthHandler{
 		DB:                   db,
+		EmailService:         emailService,
 		GenerateJWT:          middleware.GenerateJWT,
 		GenerateRefreshToken: middleware.GenerateRefreshToken,
 		ValidateRefreshToken: middleware.ValidateRefreshToken,
 	}
+}
+
+type RegisterRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // @Summary Register new user
@@ -46,53 +56,53 @@ func NewAuthHandler(db database.DB) *AuthHandler {
 // @Failure 500 {object} models.ErrorResponse "Internal server error"
 // @Router /register [post]
 func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		log.Printf("Error decoding input: %v", err)
-		JSONError(w, "Invalid input", http.StatusBadRequest)
+	var req RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		JSONError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Registering user with password: %s", user.Password)
+	// Validate email and password
+	if req.Email == "" || req.Password == "" {
+		JSONError(w, "Email and password are required", http.StatusBadRequest)
+		return
+	}
 
-	// Hash the password
+	user := &models.User{
+		Email:    req.Email,
+		Password: req.Password,
+	}
+
 	if err := user.HashPassword(); err != nil {
-		log.Printf("Error hashing password: %v", err)
-		JSONError(w, "Failed to hash password", http.StatusInternalServerError)
+		JSONError(w, "Error hashing password", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Password hashed to: %s", user.Password)
-
-	// Create the user
 	if err := user.CreateUser(h.DB); err != nil {
-		log.Printf("Error creating user: %v", err)
-
-		// Check for duplicate username error
-		if err.Error() == "username already exists" {
-			log.Printf("Username already exists")
-			JSONError(w, "Username already exists", http.StatusConflict)
+		if strings.Contains(err.Error(), "email already exists") {
+			JSONError(w, "Email already exists", http.StatusConflict)
 			return
 		}
-
-		JSONError(w, "Failed to create user", http.StatusInternalServerError)
+		JSONError(w, "Error creating user", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	if err := h.EmailService.SendWelcomeEmail(user.Email, user.Username); err != nil {
+		// Log the error but don't fail the registration
+		log.Printf("Failed to send welcome email: %v", err)
+	}
+
+	log.Printf("User registered successfully")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "User registered successfully",
+	})
 }
 
 // LoginRequest represents the login request payload
 // @Description Login request structure
 type LoginRequest struct {
-	// Username for authentication
-	// @example "john_doe"
-	Username string `json:"username"`
-
-	// Password for authentication
-	// @example "secretpassword123"
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -109,26 +119,27 @@ type LoginRequest struct {
 // @Router /login [post]
 func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Failed to decode login request: %v", err)
-		JSONError(w, "Invalid input", http.StatusBadRequest)
+		JSONError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Login attempt for user: %s with password: %s", req.Username, req.Password)
+	log.Printf("Login attempt for user: %s with password: %s", req.Email, req.Password)
 
 	// Check if password or username is empty FIRST
-	if req.Username == "" || req.Password == "" {
-		JSONError(w, "Username and password are required", http.StatusBadRequest)
+	if req.Email == "" || req.Password == "" {
+		JSONError(w, "Email and password are required", http.StatusBadRequest)
 		return
 	}
 
 	// Get the user from the database
-	user, err := models.GetUserByUsername(h.DB, req.Username)
+	user, err := models.GetUserByEmail(h.DB, req.Email)
 	if err != nil {
-		log.Printf("Failed to get user by username: %v", err)
-		JSONError(w, "Invalid credentials", http.StatusUnauthorized)
+		if err == sql.ErrNoRows {
+			JSONError(w, "Invalid credentials", http.StatusUnauthorized)
+			return
+		}
+		JSONError(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -136,7 +147,6 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check the password
 	if err := user.CheckPassword(req.Password); err != nil {
-		log.Printf("Password check failed: %v", err)
 		JSONError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -155,6 +165,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("New refresh token: %s", refreshToken)
 	// Return both tokens to the client
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -199,6 +210,7 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	log.Printf("New access token: %s", accessToken)
 	// Return the new access token
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"access_token": accessToken})

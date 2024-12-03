@@ -14,6 +14,7 @@ import (
 type User struct {
 	ID        int       `json:"id"`
 	Username  string    `json:"username"`
+	Email     string    `json:"email"`
 	Password  string    `json:"password,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -59,9 +60,13 @@ func (u *User) CheckPassword(password string) error {
 
 // CreateUser inserts a new user into the database
 func (u *User) CreateUser(db database.DB) error {
-	// Check if username or password is empty
-	if u.Username == "" || u.Password == "" {
-		return fmt.Errorf("username and password are required")
+	if u.Email == "" || u.Password == "" {
+		return fmt.Errorf("email and password are required")
+	}
+
+	// Set username from email if not provided
+	if u.Username == "" {
+		u.Username = strings.Split(u.Email, "@")[0]
 	}
 
 	// Check if password is hashed
@@ -69,28 +74,37 @@ func (u *User) CreateUser(db database.DB) error {
 		return fmt.Errorf("password must be hashed before saving")
 	}
 
-	log.Printf("Creating user with hash: %s", u.Password)
-
 	query := `
-        INSERT INTO users (username, password, created_at, updated_at)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO users (email, username, password, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING id`
 
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
 
-	log.Printf("Storing hashed password for user %s: %s", u.Username, u.Password)
-
-	err := db.QueryRow(query, u.Username, u.Password, u.CreatedAt, u.UpdatedAt).Scan(&u.ID)
+	err := db.QueryRow(query, u.Email, u.Username, u.Password, u.CreatedAt, u.UpdatedAt).Scan(&u.ID)
 	if err != nil {
-		// Check if the error is due to a unique constraint violation
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" { // Unique constraint violation
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			if strings.Contains(pqErr.Message, "email") {
+				return fmt.Errorf("email already exists")
+			}
 			return fmt.Errorf("username already exists")
 		}
 		return err
 	}
 
 	return nil
+}
+
+// Add new method for finding user by email
+func GetUserByEmail(db database.DB, email string) (User, error) {
+	var user User
+	query := `SELECT id, email, username, password, created_at, updated_at FROM users WHERE email = $1`
+	err := db.QueryRow(query, email).Scan(&user.ID, &user.Email, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return user, err
+	}
+	return user, nil
 }
 
 // GetUserByUsername retrieves a user by their username

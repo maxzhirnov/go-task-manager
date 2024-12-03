@@ -259,17 +259,20 @@ func (h *TaskHandler) UpdateTaskPositions(w http.ResponseWriter, r *http.Request
 		// Get the task first
 		task, err := models.GetTask(h.DB, taskID)
 		if err != nil {
+			log.Printf("Task not found: %v", err)
 			JSONError(w, "Task not found", http.StatusNotFound)
 			return
 		}
 
 		// Update the task's position
 		if err := task.UpdateTaskPosition(h.DB, userID, newPosition); err != nil {
+			log.Printf("Failed to update position: %v", err)
 			JSONError(w, "Failed to update position", http.StatusInternalServerError)
 			return
 		}
 	}
 
+	log.Printf("Positions updated successfully")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Positions updated successfully"})
 }
@@ -288,6 +291,7 @@ func (h *TaskHandler) GetUserStatistics(w http.ResponseWriter, r *http.Request) 
 	// Get the user_id from the JWT claims
 	claims, ok := r.Context().Value("claims").(*middleware.Claims)
 	if !ok {
+		log.Printf("Unauthorized")
 		JSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -300,6 +304,7 @@ func (h *TaskHandler) GetUserStatistics(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	log.Printf("User statistics: %v", stats)
 	// Return the statistics
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)

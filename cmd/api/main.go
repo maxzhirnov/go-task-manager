@@ -11,26 +11,35 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/maxzhirnov/go-task-manager/config"
 	_ "github.com/maxzhirnov/go-task-manager/docs"
 	"github.com/maxzhirnov/go-task-manager/internal/handlers"
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
+	"github.com/maxzhirnov/go-task-manager/pkg/email"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-func setupRouter() *mux.Router {
+func setupRouter(cfg *config.Config) *mux.Router {
 	db, err := database.InitDB()
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	// Initialize email service
+	emailService := email.NewEmailService(
+		cfg.SMTP.Host,
+		cfg.SMTP.Port,
+		cfg.SMTP.Username,
+		cfg.SMTP.Password,
+	)
+
 	r := mux.NewRouter()
 
 	// Auth handlers
-	authHandler := handlers.NewAuthHandler(db)
+	authHandler := handlers.NewAuthHandler(db, emailService)
 	r.HandleFunc("/api/register", authHandler.RegisterHandler).Methods("POST")
 	r.HandleFunc("/api/login", authHandler.LoginHandler).Methods("POST")
 	r.HandleFunc("/api/refresh", authHandler.RefreshTokenHandler).Methods("POST")
@@ -67,12 +76,15 @@ func setupRouter() *mux.Router {
 }
 
 func main() {
-	r := setupRouter()
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// Load configuration
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
 	}
-	log.Printf("Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+
+	r := setupRouter(cfg)
+
+	serverAddr := ":" + cfg.Server.Port
+	log.Printf("Server starting on port %s", cfg.Server.Port)
+	log.Fatal(http.ListenAndServe(serverAddr, r))
 }

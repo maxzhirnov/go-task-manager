@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/maxzhirnov/go-task-manager/config"
 )
 
-// DB is an interface that both *sql.DB and our mock can implement
+// DB interface remains the same
 type DB interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
@@ -19,35 +19,41 @@ type DB interface {
 	Begin() (*sql.Tx, error)
 }
 
+type DBConfig struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
+	DBName   string
+}
+
 func InitDB() (DB, error) {
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "localhost"
-	}
-	dbPort := os.Getenv("DB_PORT")
-	if dbPort == "" {
-		dbPort = "5432"
-	}
-	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		dbUser = "postgres"
-	}
-	dbPassword := os.Getenv("DB_PASSWORD")
-	if dbPassword == "" {
-		dbPassword = "mysecretpassword"
-	}
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = "taskmanager"
+	// Load configuration
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPassword, dbName)
+	dbConfig := DBConfig{
+		Host:     cfg.Database.Host,
+		Port:     cfg.Database.Port,
+		User:     cfg.Database.User,
+		Password: cfg.Database.Password,
+		DBName:   cfg.Database.DBName,
+	}
+
+	return ConnectWithRetry(dbConfig)
+}
+
+func ConnectWithRetry(cfg DBConfig) (DB, error) {
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName)
 
 	// Try to connect to the database with retries
 	var db *sql.DB
 	var err error
 	maxRetries := 5
+
 	for i := 0; i < maxRetries; i++ {
 		db, err = sql.Open("postgres", connStr)
 		if err != nil {
@@ -74,4 +80,9 @@ func InitDB() (DB, error) {
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	return db, nil
+}
+
+// For testing purposes
+func InitTestDB(cfg DBConfig) (DB, error) {
+	return ConnectWithRetry(cfg)
 }

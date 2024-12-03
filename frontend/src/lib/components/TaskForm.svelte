@@ -107,6 +107,7 @@
                 bind:value={description} 
                 placeholder="Task Description" 
                 name="description"
+                on:keydown={(e) => e.key === 'Enter' && handleFullSubmit()}
             ></textarea>
             <select bind:value={status} required>
                 <option value="pending">Pending</option>

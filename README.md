@@ -6,7 +6,7 @@ A secure and user-friendly **Task Manager** application built with **Go** for th
 You can try out the application at: [https://todo.mzhirnov.com](https://todo.mzhirnov.com)
 
 #### Test Credentials
-- Username: `testuser`
+- Username: `testuser@temporary.com`
 - Password: `123456`
 
 ---

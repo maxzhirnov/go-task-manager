@@ -11,9 +11,6 @@
         ? Math.round((statistics.completed_tasks / statistics.total_tasks) * 100) 
         : 0;
     
-    $: inProgressPercentage = statistics 
-        ? Math.round((statistics.in_progress_tasks / statistics.total_tasks) * 100) 
-        : 0;
 
         function formatTrend(stats) {
         if (!stats) return { text: '0%', class: 'neutral' };

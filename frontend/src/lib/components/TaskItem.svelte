@@ -175,13 +175,14 @@
     }
 
     .task-text-content {
-        overflow-wrap: break-word;
-        word-break: break-all;
-        white-space: normal;
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-    }
+    overflow-wrap: anywhere;    /* More modern than break-word */
+    hyphens: auto;             /* Adds hyphens when breaking words */
+    word-break: normal;        /* Use normal word breaking rules */
+    white-space: normal;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
 
     .task-text-footer {
         margin-top: auto;
@@ -196,6 +197,7 @@
     }
 
     .task-text .task-text-content p {
+        white-space: pre-line;
         font-size: 0.8rem;
         line-height: 1.6;
         color: #6d6c6c;

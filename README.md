@@ -137,12 +137,27 @@ If you want to run the application locally without Docker:
 
 ### **Sample `.env` File**
 ```env
+# Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_PASSWORD=mysecretpassword
+DB_PASSWORD=your_password
 DB_NAME=taskmanager
-PORT=8080
+
+# SMTP Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=sample@gmail.com
+SMTP_PASSWORD=your-password
+SMTP_FROM_NAME=ActionHub
+SMTP_BASE_URL=http://localhost:5173
+SMTP_TEMPLATES_PATH=templates/email
+
+# Server Configuration
+SERVER_PORT=8080
+
+# JWT Configuration
+JWT_SECRET=your-secret-key
 ```
 
 ---
@@ -162,21 +177,8 @@ go tool cover -html=coverage.out
 
 ---
 
-### **Screenshots**
-
-#### **Login Page**
-Login Page
-
 #### **Task Management Page**
 Task Management Page
-
----
-
-### **Roadmap**
-1. Add pagination for tasks.
-2. Implement role-based access control (e.g., admin vs. user).
-3. Add more comprehensive integration tests.
-4. Deploy the application to a cloud platform.
 
 ---
 

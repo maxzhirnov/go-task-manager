@@ -91,6 +91,15 @@ type UserStatistics struct {
 
 	// TasksCreatedToday is the number of tasks created in the last 24 hours
 	TasksCreatedToday int `json:"tasks_created_today"`
+
+	TasksLastWeek        int     `json:"tasks_last_week"`
+	TasksThisWeek        int     `json:"tasks_this_week"`
+	WeeklyTrendUp        bool    `json:"weekly_trend_up"`
+	WeeklyTrendValue     int     `json:"weekly_trend_value"`
+	PendingTasksLastWeek int     `json:"pending_tasks_last_week"`
+	PendingTrendUp       bool    `json:"pending_trend_up"`
+	PendingTrendValue    int     `json:"pending_trend_value"`
+	AverageDailyTasks    float64 `json:"average_daily_tasks"`
 }
 
 // GenerateVerificationToken creates a secure random token for email verification.
@@ -644,24 +653,98 @@ func GetUserByEmail(db database.DB, email string) (User, error) {
 func GetUserStatistics(db database.DB, userID int) (*UserStatistics, error) {
 	stats := &UserStatistics{}
 
-	// SQL query to fetch statistics from view
 	query := `
+        WITH weekly_stats AS (
+            SELECT 
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as this_week,
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '14 days' 
+                    AND created_at < NOW() - INTERVAL '7 days') as last_week,
+                COUNT(*) FILTER (
+                    WHERE status = 'pending' 
+                    AND created_at >= NOW() - INTERVAL '7 days'
+                ) as pending_this_week,
+                COUNT(*) FILTER (
+                    WHERE status = 'pending' 
+                    AND created_at >= NOW() - INTERVAL '14 days'
+                    AND created_at < NOW() - INTERVAL '7 days'
+                ) as pending_last_week
+            FROM tasks 
+            WHERE user_id = $1
+        ),
+        daily_average AS (
+            SELECT 
+                ROUND(COUNT(*)::decimal / 
+                    GREATEST(
+                        EXTRACT(DAY FROM (NOW() - MIN(created_at)))::decimal,
+                        1
+                    ), 2) as avg_daily_tasks
+            FROM tasks 
+            WHERE user_id = $1
+            AND created_at >= NOW() - INTERVAL '30 days'
+        )
         SELECT 
-            user_id, username, total_tasks, completed_tasks,
-            pending_tasks, in_progress_tasks, deleted_tasks,
-            tasks_created_today
-        FROM user_statistics
-        WHERE user_id = $1`
+            us.user_id, 
+            us.username, 
+            us.total_tasks, 
+            us.completed_tasks,
+            us.pending_tasks, 
+            us.in_progress_tasks, 
+            us.deleted_tasks,
+            us.tasks_created_today,
+            ws.last_week as tasks_last_week,
+            ws.this_week as tasks_this_week,
+            CASE 
+                WHEN ws.last_week = 0 THEN true
+                ELSE ws.this_week > ws.last_week 
+            END as weekly_trend_up,
+            CASE 
+                WHEN ws.last_week = 0 THEN 
+                    CASE 
+                        WHEN ws.this_week = 0 THEN 0
+                        ELSE 100
+                    END
+                ELSE ((ws.this_week - ws.last_week)::float / ws.last_week * 100)::int
+            END as weekly_trend_value,
+            ws.pending_last_week,
+            CASE 
+                WHEN ws.pending_last_week = 0 THEN true
+                ELSE ws.pending_this_week > ws.pending_last_week 
+            END as pending_trend_up,
+            CASE 
+                WHEN ws.pending_last_week = 0 THEN 
+                    CASE 
+                        WHEN ws.pending_this_week = 0 THEN 0
+                        ELSE 100
+                    END
+                ELSE ((ws.pending_this_week - ws.pending_last_week)::float / ws.pending_last_week * 100)::int
+            END as pending_trend_value,
+            COALESCE(da.avg_daily_tasks, 0) as average_daily_tasks
+        FROM user_statistics us
+        CROSS JOIN weekly_stats ws
+        CROSS JOIN daily_average da
+        WHERE us.user_id = $1`
 
-	// Execute query and scan results into UserStatistics struct
 	err := db.QueryRow(query, userID).Scan(
-		&stats.UserID, &stats.Username, &stats.TotalTasks,
-		&stats.CompletedTasks, &stats.PendingTasks,
-		&stats.InProgressTasks, &stats.DeletedTasks,
+		&stats.UserID,
+		&stats.Username,
+		&stats.TotalTasks,
+		&stats.CompletedTasks,
+		&stats.PendingTasks,
+		&stats.InProgressTasks,
+		&stats.DeletedTasks,
 		&stats.TasksCreatedToday,
+		&stats.TasksLastWeek,
+		&stats.TasksThisWeek,
+		&stats.WeeklyTrendUp,
+		&stats.WeeklyTrendValue,
+		&stats.PendingTasksLastWeek,
+		&stats.PendingTrendUp,
+		&stats.PendingTrendValue,
+		&stats.AverageDailyTasks,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user statistics: %w", err)
 	}
+
 	return stats, nil
 }

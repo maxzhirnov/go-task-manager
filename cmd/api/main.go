@@ -1,11 +1,3 @@
-// @title Task Manager API
-// @version 1.0
-// @description Task management system with JWT authentication
-// @host localhost:8080
-// @BasePath /api
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
 package main
 
 import (
@@ -13,10 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/maxzhirnov/go-task-manager/config"
-	_ "github.com/maxzhirnov/go-task-manager/docs"
 	"github.com/maxzhirnov/go-task-manager/internal/handlers"
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
+	"github.com/maxzhirnov/go-task-manager/pkg/config"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
 	"github.com/maxzhirnov/go-task-manager/pkg/email"
 	httpSwagger "github.com/swaggo/http-swagger"

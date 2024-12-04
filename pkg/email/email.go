@@ -1,3 +1,5 @@
+// Package email provides email sending functionality for the application,
+// including welcome and verification emails with HTML templates.
 package email
 
 import (
@@ -7,18 +9,38 @@ import (
 	"gopkg.in/mail.v2"
 )
 
+// EmailSender defines the interface for sending various types of emails.
+// This interface allows for easy mocking in tests and flexibility in
+// implementation.
 type EmailSender interface {
+	// SendWelcomeEmail sends a welcome email to new users
 	SendWelcomeEmail(to, username string) error
+
+	// SendVerificationEmail sends an email verification link
 	SendVerificationEmail(to, username, token string) error
 }
 
+// EmailService implements the EmailSender interface and handles
+// email sending operations using SMTP.
 type EmailService struct {
-	dialer    *mail.Dialer
-	from      string
-	templates *EmailTemplate
-	baseURL   string
+	dialer    *mail.Dialer   // SMTP connection handler
+	from      string         // Sender email address
+	templates *EmailTemplate // Email template manager
+	baseURL   string         // Base URL for email links
 }
 
+// NewEmailService creates a new email service instance with the provided configuration.
+//
+// Parameters:
+//   - host: SMTP server hostname
+//   - port: SMTP server port
+//   - username: SMTP authentication username
+//   - password: SMTP authentication password
+//   - baseURL: Base URL for application links in emails
+//
+// Returns:
+//   - *EmailService: Configured email service
+//   - error: Any error during template initialization
 func NewEmailService(host string, port int, username, password, baseURL string) (*EmailService, error) {
 	templates, err := NewEmailTemplate()
 	if err != nil {
@@ -33,18 +55,41 @@ func NewEmailService(host string, port int, username, password, baseURL string) 
 	}, nil
 }
 
+// WelcomeEmailData contains the data needed for the welcome email template.
+type WelcomeEmailData struct {
+	Username string // User's display name
+	LoginURL string // URL to the login page
+	Year     int    // Current year for copyright notice
+}
+
+// SendWelcomeEmail sends a welcome email to a newly registered user.
+//
+// Parameters:
+//   - to: Recipient email address
+//   - username: Recipient's username
+//
+// Returns:
+//   - error: Any error encountered during email sending
+//
+// Template Data:
+//   - Username: User's display name
+//   - LoginURL: URL to the login page
+//   - Year: Current year for copyright
 func (s *EmailService) SendWelcomeEmail(to, username string) error {
+	// Prepare template data
 	data := WelcomeEmailData{
 		Username: username,
 		LoginURL: s.baseURL + "/login",
 		Year:     time.Now().Year(),
 	}
 
+	// Execute email template
 	body, err := s.templates.ExecuteTemplate("welcome.html", data)
 	if err != nil {
 		return err
 	}
 
+	// Create and send email
 	m := mail.NewMessage()
 	m.SetHeader("From", s.from)
 	m.SetHeader("To", to)
@@ -54,13 +99,29 @@ func (s *EmailService) SendWelcomeEmail(to, username string) error {
 	return s.dialer.DialAndSend(m)
 }
 
+// VerificationEmailData contains the data needed for the verification email template.
 type VerificationEmailData struct {
 	Username         string
 	VerificationLink string
 	Year             int
 }
 
+// SendVerificationEmail sends an email with a verification link to a user.
+//
+// Parameters:
+//   - to: Recipient email address
+//   - username: Recipient's username
+//   - token: Verification token
+//
+// Returns:
+//   - error: Any error encountered during email sending
+//
+// Template Data:
+//   - Username: User's display name
+//   - VerificationLink: Complete verification URL with token
+//   - Year: Current year for copyright
 func (s *EmailService) SendVerificationEmail(to, username, token string) error {
+	// Create email message
 	m := mail.NewMessage()
 	m.SetHeader("From", s.from)
 	m.SetHeader("To", to)

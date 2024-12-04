@@ -6,9 +6,6 @@ dev:
 prod:
 	docker-compose up --build
 
-swagger:
-	swag init --parseDependency --parseInternal -g cmd/api/main.go
-
 # Run tests with coverage
 test:
 	go test ./... -coverprofile=coverage.out

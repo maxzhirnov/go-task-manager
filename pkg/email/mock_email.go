@@ -4,7 +4,6 @@ import "log"
 
 type MockEmailService struct{}
 
-// Ensure MockEmailService implements EmailSender
 var _ EmailSender = (*MockEmailService)(nil)
 
 func NewMockEmailService() EmailSender {

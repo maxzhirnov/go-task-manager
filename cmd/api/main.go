@@ -47,6 +47,8 @@ func setupRouter(cfg *config.Config) *mux.Router {
 	r.HandleFunc("/api/register", authHandler.RegisterHandler).Methods("POST")
 	r.HandleFunc("/api/login", authHandler.LoginHandler).Methods("POST")
 	r.HandleFunc("/api/refresh", authHandler.RefreshTokenHandler).Methods("POST")
+	r.HandleFunc("/api/verify-email", authHandler.VerifyEmailHandler).Methods("GET")
+	r.HandleFunc("/api/resend-verification", authHandler.ResendVerificationHandler).Methods("POST")
 
 	// Task handlers
 	taskHandler := handlers.NewTaskHandler(db)

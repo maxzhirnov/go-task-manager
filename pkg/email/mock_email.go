@@ -15,3 +15,8 @@ func (s *MockEmailService) SendWelcomeEmail(to, username string) error {
 	log.Printf("Mock: Sending welcome email to %s (%s)", username, to)
 	return nil
 }
+
+func (s *MockEmailService) SendVerificationEmail(to, username, token string) error {
+	log.Printf("Mock: Sending verification email to %s (%s)", username, to)
+	return nil
+}

@@ -59,21 +59,29 @@
 				
 				<option value="file1">github.com/maxzhirnov/go-task-manager/collect_source.go (0.0%)</option>
 				
-				<option value="file2">github.com/maxzhirnov/go-task-manager/docs/docs.go (0.0%)</option>
+				<option value="file2">github.com/maxzhirnov/go-task-manager/config/config.go (0.0%)</option>
 				
-				<option value="file3">github.com/maxzhirnov/go-task-manager/internal/handlers/auth_handler.go (63.6%)</option>
+				<option value="file3">github.com/maxzhirnov/go-task-manager/docs/docs.go (0.0%)</option>
 				
-				<option value="file4">github.com/maxzhirnov/go-task-manager/internal/handlers/task_handler.go (70.1%)</option>
+				<option value="file4">github.com/maxzhirnov/go-task-manager/internal/handlers/auth_handler.go (69.5%)</option>
 				
-				<option value="file5">github.com/maxzhirnov/go-task-manager/internal/handlers/utils.go (100.0%)</option>
+				<option value="file5">github.com/maxzhirnov/go-task-manager/internal/handlers/task_handler.go (65.6%)</option>
 				
-				<option value="file6">github.com/maxzhirnov/go-task-manager/internal/middleware/jwt.go (90.0%)</option>
+				<option value="file6">github.com/maxzhirnov/go-task-manager/internal/handlers/utils.go (100.0%)</option>
 				
-				<option value="file7">github.com/maxzhirnov/go-task-manager/internal/models/task.go (97.1%)</option>
+				<option value="file7">github.com/maxzhirnov/go-task-manager/internal/middleware/jwt.go (90.0%)</option>
 				
-				<option value="file8">github.com/maxzhirnov/go-task-manager/internal/models/user.go (74.4%)</option>
+				<option value="file8">github.com/maxzhirnov/go-task-manager/internal/models/task.go (97.1%)</option>
 				
-				<option value="file9">github.com/maxzhirnov/go-task-manager/pkg/database/database.go (0.0%)</option>
+				<option value="file9">github.com/maxzhirnov/go-task-manager/internal/models/user.go (69.2%)</option>
+				
+				<option value="file10">github.com/maxzhirnov/go-task-manager/pkg/database/database.go (0.0%)</option>
+				
+				<option value="file11">github.com/maxzhirnov/go-task-manager/pkg/email/email.go (0.0%)</option>
+				
+				<option value="file12">github.com/maxzhirnov/go-task-manager/pkg/email/mock_email.go (20.0%)</option>
+				
+				<option value="file13">github.com/maxzhirnov/go-task-manager/pkg/email/templates.go (0.0%)</option>
 				
 				</select>
 			</div>
@@ -100,29 +108,44 @@ package main
 import (
         "log"
         "net/http"
-        "os"
 
         "github.com/gorilla/mux"
+        "github.com/maxzhirnov/go-task-manager/config"
         _ "github.com/maxzhirnov/go-task-manager/docs"
         "github.com/maxzhirnov/go-task-manager/internal/handlers"
         "github.com/maxzhirnov/go-task-manager/internal/middleware"
         "github.com/maxzhirnov/go-task-manager/pkg/database"
+        "github.com/maxzhirnov/go-task-manager/pkg/email"
         httpSwagger "github.com/swaggo/http-swagger"
 )
 
-func setupRouter() *mux.Router <span class="cov0" title="0">{
+func setupRouter(cfg *config.Config) *mux.Router <span class="cov0" title="0">{
         db, err := database.InitDB()
         if err != nil </span><span class="cov0" title="0">{
                 log.Fatalf("Failed to initialize database: %v", err)
         }</span>
 
+        // Initialize email service
+        <span class="cov0" title="0">emailService, err := email.NewEmailService(
+                cfg.SMTP.Host,
+                cfg.SMTP.Port,
+                cfg.SMTP.Username,
+                cfg.SMTP.Password,
+                cfg.SMTP.BaseURL,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to initialize email service: %v", err)
+        }</span>
+
         <span class="cov0" title="0">r := mux.NewRouter()
 
         // Auth handlers
-        authHandler := handlers.NewAuthHandler(db)
+        authHandler := handlers.NewAuthHandler(db, emailService)
         r.HandleFunc("/api/register", authHandler.RegisterHandler).Methods("POST")
         r.HandleFunc("/api/login", authHandler.LoginHandler).Methods("POST")
         r.HandleFunc("/api/refresh", authHandler.RefreshTokenHandler).Methods("POST")
+        r.HandleFunc("/api/verify-email", authHandler.VerifyEmailHandler).Methods("GET")
+        r.HandleFunc("/api/resend-verification", authHandler.ResendVerificationHandler).Methods("POST")
 
         // Task handlers
         taskHandler := handlers.NewTaskHandler(db)
@@ -156,14 +179,17 @@ func setupRouter() *mux.Router <span class="cov0" title="0">{
 }
 
 func main() <span class="cov0" title="0">{
-        r := setupRouter()
-
-        port := os.Getenv("PORT")
-        if port == "" </span><span class="cov0" title="0">{
-                port = "8080"
+        // Load configuration
+        cfg, err := config.LoadConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to load configuration: %v", err)
         }</span>
-        <span class="cov0" title="0">log.Printf("Server starting on port %s", port)
-        log.Fatal(http.ListenAndServe(":"+port, r))</span>
+
+        <span class="cov0" title="0">r := setupRouter(cfg)
+
+        serverAddr := ":" + cfg.Server.Port
+        log.Printf("Server starting on port %s", cfg.Server.Port)
+        log.Fatal(http.ListenAndServe(serverAddr, r))</span>
 }
 </pre>
 		
@@ -186,10 +212,10 @@ var (
         // Конфигурация расширений файлов для парсинга
         fileExtensions = []string{
                 ".go",
-                ".html",
+                // ".html",
                 ".sql",
-                ".svelte",
-                ".js",
+                // ".svelte",
+                // ".js",
                 // Можно добавить другие расширения
         }
 
@@ -363,7 +389,97 @@ func getCurrentDir() string <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file2" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
+		<pre class="file" id="file2" style="display: none">package config
+
+import (
+        "os"
+        "strconv"
+
+        "github.com/joho/godotenv"
+)
+
+type Config struct {
+        Database struct {
+                Host     string
+                Port     int
+                User     string
+                Password string
+                DBName   string
+        }
+        SMTP struct {
+                Host      string
+                Port      int
+                Username  string
+                Password  string
+                FromName  string   // Added for email "From" display name
+                BaseURL   string   // Added for email links
+                Templates struct { // Added for template configuration
+                        Path string
+                }
+        }
+        Server struct {
+                Port string
+        }
+        JWT struct {
+                Secret string
+        }
+}
+
+func LoadConfig() (*Config, error) <span class="cov0" title="0">{
+        // Load .env file if it exists
+        godotenv.Load()
+
+        config := &amp;Config{}
+
+        // Database configuration
+        config.Database.Host = getEnv("DB_HOST", "localhost")
+        config.Database.Port = getEnvAsInt("DB_PORT", 5432)
+        config.Database.User = getEnv("DB_USER", "postgres")
+        config.Database.Password = getEnv("DB_PASSWORD", "")
+        config.Database.DBName = getEnv("DB_NAME", "taskmanager")
+
+        // SMTP configuration
+        config.SMTP.Host = getEnv("SMTP_HOST", "smtp.gmail.com")
+        config.SMTP.Port = getEnvAsInt("SMTP_PORT", 587)
+        config.SMTP.Username = getEnv("SMTP_USERNAME", "")
+        config.SMTP.Password = getEnv("SMTP_PASSWORD", "")
+        config.SMTP.FromName = getEnv("SMTP_FROM_NAME", "Task Manager")
+        config.SMTP.BaseURL = getEnv("SMTP_BASE_URL", "http://localhost:8080")
+        config.SMTP.Templates.Path = getEnv("SMTP_TEMPLATES_PATH", "templates/email")
+
+        // Server configuration
+        config.Server.Port = getEnv("SERVER_PORT", "8080")
+
+        // JWT configuration
+        config.JWT.Secret = getEnv("JWT_SECRET", "your-secret-key")
+
+        return config, nil
+}</span>
+
+// Helper function to get environment variable with a default value
+func getEnv(key, defaultValue string) string <span class="cov0" title="0">{
+        value := os.Getenv(key)
+        if value == "" </span><span class="cov0" title="0">{
+                return defaultValue
+        }</span>
+        <span class="cov0" title="0">return value</span>
+}
+
+// Helper function to get environment variable as integer
+func getEnvAsInt(key string, defaultValue int) int <span class="cov0" title="0">{
+        value := os.Getenv(key)
+        if value == "" </span><span class="cov0" title="0">{
+                return defaultValue
+        }</span>
+        <span class="cov0" title="0">intValue, err := strconv.Atoi(value)
+        if err != nil </span><span class="cov0" title="0">{
+                return defaultValue
+        }</span>
+        <span class="cov0" title="0">return intValue</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
 package docs
 
 import "github.com/swaggo/swag"
@@ -1038,7 +1154,7 @@ func init() <span class="cov0" title="0">{
 }</span>
 </pre>
 		
-		<pre class="file" id="file3" style="display: none">// @title Task Manager API
+		<pre class="file" id="file4" style="display: none">// @title Task Manager API
 // @version 1.0
 // @description Task management system with JWT authentication
 // @host localhost:8080
@@ -1049,30 +1165,40 @@ func init() <span class="cov0" title="0">{
 package handlers
 
 import (
+        "database/sql"
         "encoding/json"
         "log"
         "net/http"
+        "strings"
 
         "github.com/maxzhirnov/go-task-manager/internal/middleware"
         "github.com/maxzhirnov/go-task-manager/internal/models"
         "github.com/maxzhirnov/go-task-manager/pkg/database"
+        "github.com/maxzhirnov/go-task-manager/pkg/email"
 )
 
 type AuthHandler struct {
         DB                   database.DB
+        EmailService         email.EmailSender
         GenerateJWT          func(userID int, username string) (string, error)
         GenerateRefreshToken func(userID int, username string) (string, error)
         ValidateRefreshToken func(token string) (*middleware.Claims, error)
 }
 
-func NewAuthHandler(db database.DB) *AuthHandler <span class="cov8" title="1">{
+func NewAuthHandler(db database.DB, emailService email.EmailSender) *AuthHandler <span class="cov0" title="0">{
         return &amp;AuthHandler{
                 DB:                   db,
+                EmailService:         emailService,
                 GenerateJWT:          middleware.GenerateJWT,
                 GenerateRefreshToken: middleware.GenerateRefreshToken,
                 ValidateRefreshToken: middleware.ValidateRefreshToken,
         }
 }</span>
+
+type RegisterRequest struct {
+        Email    string `json:"email"`
+        Password string `json:"password"`
+}
 
 // @Summary Register new user
 // @Description Register a new user in the system
@@ -1086,53 +1212,57 @@ func NewAuthHandler(db database.DB) *AuthHandler <span class="cov8" title="1">{
 // @Failure 500 {object} models.ErrorResponse "Internal server error"
 // @Router /register [post]
 func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
-        var user models.User
-        if err := json.NewDecoder(r.Body).Decode(&amp;user); err != nil </span><span class="cov0" title="0">{
-                log.Printf("Error decoding input: %v", err)
-                JSONError(w, "Invalid input", http.StatusBadRequest)
+        var req RegisterRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov8" title="1">{
+                JSONError(w, "Invalid request body", http.StatusBadRequest)
                 return
         }</span>
 
-        <span class="cov8" title="1">log.Printf("Registering user with password: %s", user.Password)
+        // Validate email and password
+        <span class="cov8" title="1">if req.Email == "" || req.Password == "" </span><span class="cov8" title="1">{
+                JSONError(w, "Email and password are required", http.StatusBadRequest)
+                return
+        }</span>
 
-        // Hash the password
+        <span class="cov8" title="1">user := &amp;models.User{
+                Email:    req.Email,
+                Password: req.Password,
+        }
+
         if err := user.HashPassword(); err != nil </span><span class="cov0" title="0">{
-                log.Printf("Error hashing password: %v", err)
-                JSONError(w, "Failed to hash password", http.StatusInternalServerError)
+                JSONError(w, "Error hashing password", http.StatusInternalServerError)
                 return
         }</span>
 
-        <span class="cov8" title="1">log.Printf("Password hashed to: %s", user.Password)
-
-        // Create the user
-        if err := user.CreateUser(h.DB); err != nil </span><span class="cov8" title="1">{
-                log.Printf("Error creating user: %v", err)
-
-                // Check for duplicate username error
-                if err.Error() == "username already exists" </span><span class="cov8" title="1">{
-                        log.Printf("Username already exists")
-                        JSONError(w, "Username already exists", http.StatusConflict)
+        <span class="cov8" title="1">if err := user.CreateUser(h.DB); err != nil </span><span class="cov8" title="1">{
+                if strings.Contains(err.Error(), "email already exists") </span><span class="cov8" title="1">{
+                        JSONError(w, "Email already exists", http.StatusConflict)
                         return
                 }</span>
-
-                <span class="cov0" title="0">JSONError(w, "Failed to create user", http.StatusInternalServerError)
+                <span class="cov8" title="1">JSONError(w, "Error creating user", http.StatusInternalServerError)
                 return</span>
         }
 
-        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        <span class="cov8" title="1">token, err := models.GetVerificationTokenForUser(h.DB, user.ID)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("Failed to get verification token: %v", err)
+        }</span> else<span class="cov0" title="0"> {
+                if err := h.EmailService.SendVerificationEmail(user.Email, user.Username, token); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Failed to send verification email: %v", err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">log.Printf("User registered successfully")
         w.WriteHeader(http.StatusCreated)
-        json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})</span>
+        json.NewEncoder(w).Encode(map[string]string{
+                "message": "User registered successfully",
+        })</span>
 }
 
 // LoginRequest represents the login request payload
 // @Description Login request structure
 type LoginRequest struct {
-        // Username for authentication
-        // @example "john_doe"
-        Username string `json:"username"`
-
-        // Password for authentication
-        // @example "secretpassword123"
+        Email    string `json:"email"`
         Password string `json:"password"`
 }
 
@@ -1149,53 +1279,54 @@ type LoginRequest struct {
 // @Router /login [post]
 func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
         var req LoginRequest
-
-        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
-                log.Printf("Failed to decode login request: %v", err)
-                JSONError(w, "Invalid input", http.StatusBadRequest)
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov8" title="1">{
+                JSONError(w, "Invalid request body", http.StatusBadRequest)
                 return
         }</span>
 
-        <span class="cov8" title="1">log.Printf("Login attempt for user: %s with password: %s", req.Username, req.Password)
-
-        // Check if password or username is empty FIRST
-        if req.Username == "" || req.Password == "" </span><span class="cov8" title="1">{
-                JSONError(w, "Username and password are required", http.StatusBadRequest)
+        // Check if email or password is empty
+        <span class="cov8" title="1">if req.Email == "" || req.Password == "" </span><span class="cov8" title="1">{
+                JSONError(w, "Email and password are required", http.StatusBadRequest)
                 return
         }</span>
 
         // Get the user from the database
-        <span class="cov8" title="1">user, err := models.GetUserByUsername(h.DB, req.Username)
+        <span class="cov8" title="1">user, err := models.GetUserByEmail(h.DB, req.Email)
         if err != nil </span><span class="cov8" title="1">{
-                log.Printf("Failed to get user by username: %v", err)
-                JSONError(w, "Invalid credentials", http.StatusUnauthorized)
+                if err == sql.ErrNoRows </span><span class="cov8" title="1">{
+                        JSONError(w, "Invalid credentials", http.StatusUnauthorized)
+                        return
+                }</span>
+                <span class="cov8" title="1">JSONError(w, "Server error", http.StatusInternalServerError)
+                return</span>
+        }
+
+        // Check if email is verified
+        <span class="cov8" title="1">if !user.IsVerified </span><span class="cov8" title="1">{
+                JSONError(w, "Please verify your email before logging in", http.StatusForbidden)
                 return
         }</span>
-
-        <span class="cov8" title="1">log.Printf("Retrieved user: %s, stored hash: %s", user.Username, user.Password)
 
         // Check the password
-        if err := user.CheckPassword(req.Password); err != nil </span><span class="cov0" title="0">{
-                log.Printf("Password check failed: %v", err)
+        <span class="cov8" title="1">if err := user.CheckPassword(req.Password); err != nil </span><span class="cov8" title="1">{
                 JSONError(w, "Invalid credentials", http.StatusUnauthorized)
                 return
         }</span>
 
-        // Generate the access token
+        // Generate tokens
         <span class="cov8" title="1">accessToken, err := h.GenerateJWT(user.ID, user.Username)
         if err != nil </span><span class="cov0" title="0">{
                 JSONError(w, "Failed to generate access token", http.StatusInternalServerError)
                 return
         }</span>
 
-        // Generate the refresh token
         <span class="cov8" title="1">refreshToken, err := h.GenerateRefreshToken(user.ID, user.Username)
         if err != nil </span><span class="cov0" title="0">{
                 JSONError(w, "Failed to generate refresh token", http.StatusInternalServerError)
                 return
         }</span>
 
-        // Return both tokens to the client
+        // Return tokens
         <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(map[string]string{
                 "access_token":  accessToken,
@@ -1220,14 +1351,14 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
         }
 
         // Parse the request body
-        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov8" title="1">{
                 JSONError(w, "Invalid input", http.StatusBadRequest)
                 return
         }</span>
 
         // Validate the refresh token
         <span class="cov8" title="1">claims, err := h.ValidateRefreshToken(req.RefreshToken)
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil </span><span class="cov8" title="1">{
                 JSONError(w, "Invalid refresh token", http.StatusUnauthorized)
                 return
         }</span>
@@ -1239,13 +1370,76 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
                 return
         }</span>
 
+        <span class="cov8" title="1">log.Printf("New access token: %s", accessToken)
         // Return the new access token
-        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(map[string]string{"access_token": accessToken})</span>
+}
+
+func (h *AuthHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        token := r.URL.Query().Get("token")
+        if token == "" </span><span class="cov8" title="1">{
+                JSONError(w, "Verification token is required", http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov8" title="1">err := models.VerifyEmail(h.DB, token)
+        if err != nil </span><span class="cov8" title="1">{
+                if strings.Contains(err.Error(), "invalid or expired") </span><span class="cov8" title="1">{
+                        JSONError(w, "Invalid or expired verification token", http.StatusBadRequest)
+                        return
+                }</span>
+                <span class="cov8" title="1">JSONError(w, "Error verifying email", http.StatusInternalServerError)
+                return</span>
+        }
+
+        <span class="cov8" title="1">w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(map[string]string{
+                "message": "Email verified successfully",
+        })</span>
+}
+
+// Добавим метод для повторной отправки верификационного письма
+func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        var req struct {
+                Email string `json:"email"`
+        }
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+                JSONError(w, "Invalid request body", http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov0" title="0">user, err := models.GetUserByEmail(h.DB, req.Email)
+        if err != nil </span><span class="cov0" title="0">{
+                JSONError(w, "User not found", http.StatusNotFound)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if user.IsVerified </span><span class="cov0" title="0">{
+                JSONError(w, "Email is already verified", http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov0" title="0">token, err := models.CreateVerificationToken(h.DB, user.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                JSONError(w, "Error generating verification token", http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.EmailService.SendVerificationEmail(user.Email, user.Username, token.Token); err != nil </span><span class="cov0" title="0">{
+                log.Printf("Failed to send verification email: %v", err)
+                JSONError(w, "Error sending verification email", http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(map[string]string{
+                "message": "Verification email sent successfully",
+        })</span>
 }
 </pre>
 		
-		<pre class="file" id="file4" style="display: none">// @title Task Manager API
+		<pre class="file" id="file5" style="display: none">// @title Task Manager API
 // @version 1.0
 // @description Task management system with JWT authentication
 // @host localhost:8080
@@ -1506,18 +1700,21 @@ func (h *TaskHandler) UpdateTaskPositions(w http.ResponseWriter, r *http.Request
                 // Get the task first
                 task, err := models.GetTask(h.DB, taskID)
                 if err != nil </span><span class="cov8" title="1">{
+                        log.Printf("Task not found: %v", err)
                         JSONError(w, "Task not found", http.StatusNotFound)
                         return
                 }</span>
 
                 // Update the task's position
-                <span class="cov8" title="1">if err := task.UpdateTaskPosition(h.DB, userID, newPosition); err != nil </span><span class="cov0" title="0">{
+                <span class="cov0" title="0">if err := task.UpdateTaskPosition(h.DB, userID, newPosition); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Failed to update position: %v", err)
                         JSONError(w, "Failed to update position", http.StatusInternalServerError)
                         return
                 }</span>
         }
 
-        <span class="cov8" title="1">w.WriteHeader(http.StatusOK)
+        <span class="cov0" title="0">log.Printf("Positions updated successfully")
+        w.WriteHeader(http.StatusOK)
         json.NewEncoder(w).Encode(map[string]string{"message": "Positions updated successfully"})</span>
 }
 
@@ -1535,6 +1732,7 @@ func (h *TaskHandler) GetUserStatistics(w http.ResponseWriter, r *http.Request) 
         // Get the user_id from the JWT claims
         claims, ok := r.Context().Value("claims").(*middleware.Claims)
         if !ok </span><span class="cov0" title="0">{
+                log.Printf("Unauthorized")
                 JSONError(w, "Unauthorized", http.StatusUnauthorized)
                 return
         }</span>
@@ -1547,28 +1745,31 @@ func (h *TaskHandler) GetUserStatistics(w http.ResponseWriter, r *http.Request) 
                 return
         }</span>
 
+        <span class="cov0" title="0">log.Printf("User statistics: %v", stats)
         // Return the statistics
-        <span class="cov0" title="0">w.Header().Set("Content-Type", "application/json")
+        w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(stats)</span>
 }
 </pre>
 		
-		<pre class="file" id="file5" style="display: none">package handlers
+		<pre class="file" id="file6" style="display: none">package handlers
 
 import (
         "encoding/json"
+        "log"
         "net/http"
 )
 
 // JSONError sends a JSON-formatted error response
 func JSONError(w http.ResponseWriter, message string, status int) <span class="cov8" title="1">{
+        log.Printf("Error: %s", message)
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(status)
         json.NewEncoder(w).Encode(map[string]string{"error": message})
 }</span>
 </pre>
 		
-		<pre class="file" id="file6" style="display: none">package middleware
+		<pre class="file" id="file7" style="display: none">package middleware
 
 import (
         "context"
@@ -1689,7 +1890,7 @@ func JWTAuthMiddleware(next http.Handler) http.Handler <span class="cov8" title=
 }
 </pre>
 		
-		<pre class="file" id="file7" style="display: none">package models
+		<pre class="file" id="file8" style="display: none">package models
 
 import (
         "fmt"
@@ -1894,9 +2095,12 @@ func DeleteTask(db database.DB, id int) error <span class="cov8" title="1">{
 }
 </pre>
 		
-		<pre class="file" id="file8" style="display: none">package models
+		<pre class="file" id="file9" style="display: none">package models
 
 import (
+        "crypto/rand"
+        "database/sql"
+        "encoding/hex"
         "fmt"
         "log"
         "strings"
@@ -1908,11 +2112,22 @@ import (
 )
 
 type User struct {
-        ID        int       `json:"id"`
-        Username  string    `json:"username"`
-        Password  string    `json:"password,omitempty"`
-        CreatedAt time.Time `json:"created_at"`
-        UpdatedAt time.Time `json:"updated_at"`
+        ID         int       `json:"id"`
+        Username   string    `json:"username"`
+        Email      string    `json:"email"`
+        Password   string    `json:"password,omitempty"`
+        IsVerified bool      `json:"is_verified"`
+        CreatedAt  time.Time `json:"created_at"`
+        UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type VerificationToken struct {
+        ID        int        `json:"id"`
+        UserID    int        `json:"user_id"`
+        Token     string     `json:"token"`
+        ExpiresAt time.Time  `json:"expires_at"`
+        CreatedAt time.Time  `json:"created_at"`
+        UsedAt    *time.Time `json:"used_at,omitempty"`
 }
 
 type UserStatistics struct {
@@ -1926,6 +2141,94 @@ type UserStatistics struct {
         TasksCreatedToday int    `json:"tasks_created_today"`
 }
 
+// GenerateVerificationToken generates a random verification token
+func GenerateVerificationToken() (string, error) <span class="cov8" title="1">{
+        bytes := make([]byte, 32)
+        if _, err := rand.Read(bytes); err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov8" title="1">return hex.EncodeToString(bytes), nil</span>
+}
+
+// CreateVerificationToken creates a verification token for a user
+// Not using for now
+func CreateVerificationToken(db database.DB, userID int) (*VerificationToken, error) <span class="cov8" title="1">{
+        token, err := GenerateVerificationToken()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">vt := &amp;VerificationToken{
+                UserID:    userID,
+                Token:     token,
+                ExpiresAt: time.Now().Add(24 * time.Hour),
+                CreatedAt: time.Now(),
+        }
+
+        query := `
+        INSERT INTO verification_tokens (user_id, token, expires_at, created_at)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id`
+
+        err = db.QueryRow(query, vt.UserID, vt.Token, vt.ExpiresAt, vt.CreatedAt).Scan(&amp;vt.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return vt, nil</span>
+}
+
+func GetVerificationTokenForUser(db database.DB, userID int) (string, error) <span class="cov8" title="1">{
+        var token string
+        query := `
+        SELECT token 
+        FROM verification_tokens 
+        WHERE user_id = $1 
+        AND used_at IS NULL 
+        AND expires_at &gt; NOW() 
+        ORDER BY created_at DESC 
+        LIMIT 1`
+
+        err := db.QueryRow(query, userID).Scan(&amp;token)
+        if err != nil </span><span class="cov8" title="1">{
+                return "", err
+        }</span>
+        <span class="cov8" title="1">return token, nil</span>
+}
+
+func VerifyEmail(db database.DB, token string) error <span class="cov8" title="1">{
+        tx, err := db.Begin()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer tx.Rollback()
+
+        var userID int
+        query := `
+        UPDATE verification_tokens 
+        SET used_at = NOW()
+        WHERE token = $1 
+        AND expires_at &gt; NOW() 
+        AND used_at IS NULL
+        RETURNING user_id`
+
+        err = tx.QueryRow(query, token).Scan(&amp;userID)
+        if err != nil </span><span class="cov8" title="1">{
+                if err == sql.ErrNoRows </span><span class="cov8" title="1">{
+                        return fmt.Errorf("invalid or expired verification token")
+                }</span>
+                <span class="cov0" title="0">return err</span>
+        }
+
+        // Обновляем статус верификации пользователя
+        <span class="cov8" title="1">_, err = tx.Exec(`UPDATE users SET is_verified = true WHERE id = $1`, userID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">return tx.Commit()</span>
+}
+
 // HashPassword hashes the user's password
 func (u *User) HashPassword() error <span class="cov8" title="1">{
         hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
@@ -1937,73 +2240,148 @@ func (u *User) HashPassword() error <span class="cov8" title="1">{
 }
 
 // CheckPassword compares a plaintext password with the hashed password
-func (u *User) CheckPassword(password string) error <span class="cov8" title="1">{
+func (u *User) CheckPassword(password string) error <span class="cov0" title="0">{
         log.Printf("Attempting to compare:")
         log.Printf("Stored hash: %s", u.Password)
         log.Printf("Input password: %s", password)
 
-        if password == "" </span><span class="cov8" title="1">{
+        if password == "" </span><span class="cov0" title="0">{
                 return fmt.Errorf("password cannot be empty")
         }</span>
 
-        <span class="cov8" title="1">err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-        if err != nil </span><span class="cov8" title="1">{
+        <span class="cov0" title="0">err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+        if err != nil </span><span class="cov0" title="0">{
                 log.Printf("Password comparison failed: %v", err)
         }</span>
-        <span class="cov8" title="1">return err</span>
+        <span class="cov0" title="0">return err</span>
 }
 
 // CreateUser inserts a new user into the database
 func (u *User) CreateUser(db database.DB) error <span class="cov8" title="1">{
-        // Check if username or password is empty
-        if u.Username == "" || u.Password == "" </span><span class="cov0" title="0">{
-                return fmt.Errorf("username and password are required")
+        if u.Email == "" || u.Password == "" </span><span class="cov8" title="1">{
+                return fmt.Errorf("email and password are required")
         }</span>
 
-        // Check if password is hashed
-        <span class="cov8" title="1">if !strings.HasPrefix(u.Password, "$2a$") </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if u.Username == "" </span><span class="cov8" title="1">{
+                u.Username = strings.Split(u.Email, "@")[0]
+        }</span>
+
+        <span class="cov8" title="1">if !strings.HasPrefix(u.Password, "$2a$") </span><span class="cov8" title="1">{
                 return fmt.Errorf("password must be hashed before saving")
         }</span>
 
-        <span class="cov8" title="1">log.Printf("Creating user with hash: %s", u.Password)
+        <span class="cov8" title="1">tx, err := db.Begin()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer tx.Rollback()
 
+        // Создаем пользователя
         query := `
-        INSERT INTO users (username, password, created_at, updated_at)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO users (email, username, password, is_verified, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id`
 
         u.CreatedAt = time.Now()
         u.UpdatedAt = time.Now()
+        u.IsVerified = false
 
-        log.Printf("Storing hashed password for user %s: %s", u.Username, u.Password)
-
-        err := db.QueryRow(query, u.Username, u.Password, u.CreatedAt, u.UpdatedAt).Scan(&amp;u.ID)
-        if err != nil </span><span class="cov8" title="1">{
-                // Check if the error is due to a unique constraint violation
-                if pqErr, ok := err.(*pq.Error); ok &amp;&amp; pqErr.Code == "23505" </span><span class="cov8" title="1">{ // Unique constraint violation
-                        return fmt.Errorf("username already exists")
-                }</span>
+        err = tx.QueryRow(query, u.Email, u.Username, u.Password, u.IsVerified,
+                u.CreatedAt, u.UpdatedAt).Scan(&amp;u.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                if pqErr, ok := err.(*pq.Error); ok &amp;&amp; pqErr.Code == "23505" </span><span class="cov0" title="0">{
+                        if strings.Contains(pqErr.Message, "email") </span><span class="cov0" title="0">{
+                                return fmt.Errorf("email already exists")
+                        }</span>
+                        <span class="cov0" title="0">return fmt.Errorf("username already exists")</span>
+                }
                 <span class="cov0" title="0">return err</span>
         }
 
-        <span class="cov8" title="1">return nil</span>
+        // Создаем токен верификации
+        <span class="cov8" title="1">token, err := GenerateVerificationToken()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">verificationQuery := `
+        INSERT INTO verification_tokens (user_id, token, expires_at, created_at)
+        VALUES ($1, $2, $3, $4)`
+
+        _, err = tx.Exec(verificationQuery,
+                u.ID,
+                token,
+                time.Now().Add(24*time.Hour),
+                time.Now(),
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">return tx.Commit()</span>
 }
 
-// GetUserByUsername retrieves a user by their username
-func GetUserByUsername(db database.DB, username string) (User, error) <span class="cov8" title="1">{
+func ResendVerificationToken(db database.DB, userID int) (*VerificationToken, error) <span class="cov8" title="1">{
+        // Проверяем, не верифицирован ли уже пользователь
+        var isVerified bool
+        err := db.QueryRow(`SELECT is_verified FROM users WHERE id = $1`, userID).Scan(&amp;isVerified)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if isVerified </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("user is already verified")
+        }</span>
+
+        // Деактивируем старые токены
+        <span class="cov8" title="1">_, err = db.Exec(`
+        UPDATE verification_tokens 
+        SET used_at = NOW() 
+        WHERE user_id = $1 AND used_at IS NULL`,
+                userID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Создаем новый токен
+        <span class="cov8" title="1">return CreateVerificationToken(db, userID)</span>
+}
+
+// Add new method for finding user by email
+func GetUserByEmail(db database.DB, email string) (User, error) <span class="cov8" title="1">{
         var user User
-        query := `SELECT id, username, password, created_at, updated_at FROM users WHERE username = $1`
-        err := db.QueryRow(query, username).Scan(&amp;user.ID, &amp;user.Username, &amp;user.Password, &amp;user.CreatedAt, &amp;user.UpdatedAt)
+        query := `SELECT id, email, username, password, is_verified, created_at, updated_at 
+              FROM users 
+              WHERE email = $1`
+        err := db.QueryRow(query, email).Scan(
+                &amp;user.ID,
+                &amp;user.Email,
+                &amp;user.Username,
+                &amp;user.Password,
+                &amp;user.IsVerified,
+                &amp;user.CreatedAt,
+                &amp;user.UpdatedAt,
+        )
         if err != nil </span><span class="cov8" title="1">{
                 return user, err
-        }</span>
-        <span class="cov8" title="1">if user.Password == "" </span><span class="cov0" title="0">{
-                return user, fmt.Errorf("invalid password hash")
         }</span>
         <span class="cov8" title="1">return user, nil</span>
 }
 
-func GetUserStatistics(db database.DB, userID int) (*UserStatistics, error) <span class="cov0" title="0">{
+// GetUserByUsername retrieves a user by their username
+func GetUserByUsername(db database.DB, username string) (User, error) <span class="cov0" title="0">{
+        var user User
+        query := `SELECT id, username, password, created_at, updated_at FROM users WHERE username = $1`
+        err := db.QueryRow(query, username).Scan(&amp;user.ID, &amp;user.Username, &amp;user.Password, &amp;user.CreatedAt, &amp;user.UpdatedAt)
+        if err != nil </span><span class="cov0" title="0">{
+                return user, err
+        }</span>
+        <span class="cov0" title="0">if user.Password == "" </span><span class="cov0" title="0">{
+                return user, fmt.Errorf("invalid password hash")
+        }</span>
+        <span class="cov0" title="0">return user, nil</span>
+}
+
+func GetUserStatistics(db database.DB, userID int) (*UserStatistics, error) <span class="cov8" title="1">{
         stats := &amp;UserStatistics{}
         query := `
         SELECT 
@@ -2019,26 +2397,26 @@ func GetUserStatistics(db database.DB, userID int) (*UserStatistics, error) <spa
                 &amp;stats.InProgressTasks, &amp;stats.DeletedTasks,
                 &amp;stats.TasksCreatedToday,
         )
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil </span><span class="cov8" title="1">{
                 return nil, err
         }</span>
-        <span class="cov0" title="0">return stats, nil</span>
+        <span class="cov8" title="1">return stats, nil</span>
 }
 </pre>
 		
-		<pre class="file" id="file9" style="display: none">package database
+		<pre class="file" id="file10" style="display: none">package database
 
 import (
         "database/sql"
         "fmt"
         "log"
-        "os"
         "time"
 
         _ "github.com/lib/pq"
+        "github.com/maxzhirnov/go-task-manager/config"
 )
 
-// DB is an interface that both *sql.DB and our mock can implement
+// DB interface remains the same
 type DB interface {
         Query(query string, args ...interface{}) (*sql.Rows, error)
         QueryRow(query string, args ...interface{}) *sql.Row
@@ -2047,35 +2425,41 @@ type DB interface {
         Begin() (*sql.Tx, error)
 }
 
+type DBConfig struct {
+        Host     string
+        Port     int
+        User     string
+        Password string
+        DBName   string
+}
+
 func InitDB() (DB, error) <span class="cov0" title="0">{
-        dbHost := os.Getenv("DB_HOST")
-        if dbHost == "" </span><span class="cov0" title="0">{
-                dbHost = "localhost"
-        }</span>
-        <span class="cov0" title="0">dbPort := os.Getenv("DB_PORT")
-        if dbPort == "" </span><span class="cov0" title="0">{
-                dbPort = "5432"
-        }</span>
-        <span class="cov0" title="0">dbUser := os.Getenv("DB_USER")
-        if dbUser == "" </span><span class="cov0" title="0">{
-                dbUser = "postgres"
-        }</span>
-        <span class="cov0" title="0">dbPassword := os.Getenv("DB_PASSWORD")
-        if dbPassword == "" </span><span class="cov0" title="0">{
-                dbPassword = "mysecretpassword"
-        }</span>
-        <span class="cov0" title="0">dbName := os.Getenv("DB_NAME")
-        if dbName == "" </span><span class="cov0" title="0">{
-                dbName = "taskmanager"
+        // Load configuration
+        cfg, err := config.LoadConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to load config: %v", err)
         }</span>
 
-        <span class="cov0" title="0">connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-                dbHost, dbPort, dbUser, dbPassword, dbName)
+        <span class="cov0" title="0">dbConfig := DBConfig{
+                Host:     cfg.Database.Host,
+                Port:     cfg.Database.Port,
+                User:     cfg.Database.User,
+                Password: cfg.Database.Password,
+                DBName:   cfg.Database.DBName,
+        }
+
+        return ConnectWithRetry(dbConfig)</span>
+}
+
+func ConnectWithRetry(cfg DBConfig) (DB, error) <span class="cov0" title="0">{
+        connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+                cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName)
 
         // Try to connect to the database with retries
         var db *sql.DB
         var err error
         maxRetries := 5
+
         for i := 0; i &lt; maxRetries; i++ </span><span class="cov0" title="0">{
                 db, err = sql.Open("postgres", connStr)
                 if err != nil </span><span class="cov0" title="0">{
@@ -2102,6 +2486,156 @@ func InitDB() (DB, error) <span class="cov0" title="0">{
         db.SetConnMaxLifetime(5 * time.Minute)
 
         return db, nil</span>
+}
+
+// For testing purposes
+func InitTestDB(cfg DBConfig) (DB, error) <span class="cov0" title="0">{
+        return ConnectWithRetry(cfg)
+}</span>
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package email
+
+import (
+        "fmt"
+        "time"
+
+        "gopkg.in/mail.v2"
+)
+
+type EmailSender interface {
+        SendWelcomeEmail(to, username string) error
+        SendVerificationEmail(to, username, token string) error
+}
+
+type EmailService struct {
+        dialer    *mail.Dialer
+        from      string
+        templates *EmailTemplate
+        baseURL   string
+}
+
+func NewEmailService(host string, port int, username, password, baseURL string) (*EmailService, error) <span class="cov0" title="0">{
+        templates, err := NewEmailTemplate()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return &amp;EmailService{
+                dialer:    mail.NewDialer(host, port, username, password),
+                from:      username,
+                templates: templates,
+                baseURL:   baseURL,
+        }, nil</span>
+}
+
+func (s *EmailService) SendWelcomeEmail(to, username string) error <span class="cov0" title="0">{
+        data := WelcomeEmailData{
+                Username: username,
+                LoginURL: s.baseURL + "/login",
+                Year:     time.Now().Year(),
+        }
+
+        body, err := s.templates.ExecuteTemplate("welcome.html", data)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">m := mail.NewMessage()
+        m.SetHeader("From", s.from)
+        m.SetHeader("To", to)
+        m.SetHeader("Subject", "Welcome to Task Manager!")
+        m.SetBody("text/html", body)
+
+        return s.dialer.DialAndSend(m)</span>
+}
+
+type VerificationEmailData struct {
+        Username         string
+        VerificationLink string
+        Year             int
+}
+
+func (s *EmailService) SendVerificationEmail(to, username, token string) error <span class="cov0" title="0">{
+        m := mail.NewMessage()
+        m.SetHeader("From", s.from)
+        m.SetHeader("To", to)
+        m.SetHeader("Subject", "Verify Your Email Address")
+
+        // Prepare template data
+        data := VerificationEmailData{
+                Username:         username,
+                VerificationLink: fmt.Sprintf("%s/verify-email?token=%s", s.baseURL, token),
+                Year:             time.Now().Year(),
+        }
+
+        // Execute template
+        body, err := s.templates.ExecuteTemplate("verification.html", data)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to execute email template: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">m.SetBody("text/html", body)
+        return s.dialer.DialAndSend(m)</span>
+}
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package email
+
+import "log"
+
+type MockEmailService struct{}
+
+// Ensure MockEmailService implements EmailSender
+var _ EmailSender = (*MockEmailService)(nil)
+
+func NewMockEmailService() EmailSender <span class="cov8" title="1">{
+        return &amp;MockEmailService{}
+}</span>
+
+func (s *MockEmailService) SendWelcomeEmail(to, username string) error <span class="cov0" title="0">{
+        log.Printf("Mock: Sending welcome email to %s (%s)", username, to)
+        return nil
+}</span>
+
+func (s *MockEmailService) SendVerificationEmail(to, username, token string) error <span class="cov0" title="0">{
+        log.Printf("Mock: Sending verification email to %s (%s)", username, to)
+        return nil
+}</span>
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package email
+
+import (
+        "bytes"
+        "html/template"
+)
+
+type EmailTemplate struct {
+        templates *template.Template
+}
+
+type WelcomeEmailData struct {
+        Username string
+        LoginURL string
+        Year     int
+}
+
+func NewEmailTemplate() (*EmailTemplate, error) <span class="cov0" title="0">{
+        // Загружаем все шаблоны из директории templates/email
+        templates, err := template.ParseGlob("templates/email/*.html")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;EmailTemplate{templates: templates}, nil</span>
+}
+
+func (et *EmailTemplate) ExecuteTemplate(name string, data interface{}) (string, error) <span class="cov0" title="0">{
+        var buf bytes.Buffer
+        if err := et.templates.ExecuteTemplate(&amp;buf, name, data); err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov0" title="0">return buf.String(), nil</span>
 }
 </pre>
 		

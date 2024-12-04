@@ -87,9 +87,13 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.EmailService.SendWelcomeEmail(user.Email, user.Username); err != nil {
-		// Log the error but don't fail the registration
-		log.Printf("Failed to send welcome email: %v", err)
+	token, err := models.GetVerificationTokenForUser(h.DB, user.ID)
+	if err != nil {
+		log.Printf("Failed to get verification token: %v", err)
+	} else {
+		if err := h.EmailService.SendVerificationEmail(user.Email, user.Username, token); err != nil {
+			log.Printf("Failed to send verification email: %v", err)
+		}
 	}
 
 	log.Printf("User registered successfully")
@@ -124,9 +128,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Login attempt for user: %s with password: %s", req.Email, req.Password)
-
-	// Check if password or username is empty FIRST
+	// Check if email or password is empty
 	if req.Email == "" || req.Password == "" {
 		JSONError(w, "Email and password are required", http.StatusBadRequest)
 		return
@@ -143,7 +145,11 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Retrieved user: %s, stored hash: %s", user.Username, user.Password)
+	// Check if email is verified
+	if !user.IsVerified {
+		JSONError(w, "Please verify your email before logging in", http.StatusForbidden)
+		return
+	}
 
 	// Check the password
 	if err := user.CheckPassword(req.Password); err != nil {
@@ -151,22 +157,20 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate the access token
+	// Generate tokens
 	accessToken, err := h.GenerateJWT(user.ID, user.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate access token", http.StatusInternalServerError)
 		return
 	}
 
-	// Generate the refresh token
 	refreshToken, err := h.GenerateRefreshToken(user.ID, user.Username)
 	if err != nil {
 		JSONError(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("New refresh token: %s", refreshToken)
-	// Return both tokens to the client
+	// Return tokens
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"access_token":  accessToken,
@@ -214,4 +218,66 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
 	// Return the new access token
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"access_token": accessToken})
+}
+
+func (h *AuthHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		JSONError(w, "Verification token is required", http.StatusBadRequest)
+		return
+	}
+
+	err := models.VerifyEmail(h.DB, token)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid or expired") {
+			JSONError(w, "Invalid or expired verification token", http.StatusBadRequest)
+			return
+		}
+		JSONError(w, "Error verifying email", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Email verified successfully",
+	})
+}
+
+// Добавим метод для повторной отправки верификационного письма
+func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		JSONError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	user, err := models.GetUserByEmail(h.DB, req.Email)
+	if err != nil {
+		JSONError(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	if user.IsVerified {
+		JSONError(w, "Email is already verified", http.StatusBadRequest)
+		return
+	}
+
+	token, err := models.CreateVerificationToken(h.DB, user.ID)
+	if err != nil {
+		JSONError(w, "Error generating verification token", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.EmailService.SendVerificationEmail(user.Email, user.Username, token.Token); err != nil {
+		log.Printf("Failed to send verification email: %v", err)
+		JSONError(w, "Error sending verification email", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Verification email sent successfully",
+	})
 }

@@ -13,7 +13,12 @@
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || "Login failed");
+                if (response.status === 403) {
+                    errorMessage = "Please verify your email before logging in. Check your inbox for the verification link.";
+                } else {
+                    throw new Error(error.error || "Login failed");
+                }
+                return;
             }
 
             const { access_token, refresh_token } = await response.json();

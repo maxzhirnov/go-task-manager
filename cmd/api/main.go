@@ -43,6 +43,7 @@ func setupRouter(cfg *config.Config) *mux.Router {
 
 	// Task handlers
 	taskHandler := handlers.NewTaskHandler(db)
+	userHandler := handlers.NewUserHandler(db)
 	api := r.PathPrefix("/api").Subrouter()
 	api.Use(middleware.JWTAuthMiddleware)
 	api.HandleFunc("/tasks", taskHandler.GetTasks).Methods("GET")
@@ -53,6 +54,7 @@ func setupRouter(cfg *config.Config) *mux.Router {
 	api.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
 
 	api.HandleFunc("/users/statistics", taskHandler.GetUserStatistics).Methods("GET")
+	api.HandleFunc("/profile", userHandler.UpdateProfile).Methods("PUT")
 
 	// Swagger documentation
 	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(

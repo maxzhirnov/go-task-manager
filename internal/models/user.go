@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -747,4 +748,120 @@ func GetUserStatistics(db database.DB, userID int) (*UserStatistics, error) {
 	}
 
 	return stats, nil
+}
+
+func GetUserByID(db database.DB, id int) (User, error) {
+	var user User
+
+	query := `SELECT id, email, username, password, is_verified, created_at, updated_at 
+              FROM users 
+              WHERE id = $1`
+
+	err := db.QueryRow(query, id).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Username,
+		&user.Password,
+		&user.IsVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		return user, fmt.Errorf("failed to get user by ID: %w", err)
+	}
+	return user, nil
+}
+
+func (u *User) UpdateProfile(db database.DB, userID int, username, newPassword, currentPassword string) error {
+	log.Printf("Starting profile update for user ID: %d", userID)
+
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(currentPassword)); err != nil {
+		log.Printf("Password verification failed for user ID: %d", userID)
+		return fmt.Errorf("invalid current password")
+	}
+
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to start transaction: %v", err)
+		return fmt.Errorf("database transaction error: %w", err)
+	}
+	defer tx.Rollback() // Rollback if not committed
+
+	// Prepare update query components
+	updates := []string{}
+	args := []interface{}{}
+	argCount := 1
+
+	// Add username update if provided and different from current
+	if username != "" && username != u.Username {
+		log.Printf("Adding username update: %s", username)
+		updates = append(updates, fmt.Sprintf("username = $%d", argCount))
+		args = append(args, username)
+		argCount++
+	}
+
+	// Add password update if provided
+	if newPassword != "" {
+		log.Printf("Processing password update")
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("Failed to hash new password: %v", err)
+			return fmt.Errorf("password hashing error: %w", err)
+		}
+		updates = append(updates, fmt.Sprintf("password = $%d", argCount))
+		args = append(args, string(hashedPassword))
+		argCount++
+	}
+
+	// Always update the updated_at timestamp
+	updates = append(updates, fmt.Sprintf("updated_at = $%d", argCount))
+	args = append(args, time.Now())
+	argCount++
+
+	// Add userID as the last parameter
+	args = append(args, userID)
+
+	// If there are no updates, return early
+	if len(updates) == 0 {
+		log.Printf("No updates requested for user ID: %d", userID)
+		return nil
+	}
+
+	// Construct and execute the update query
+	query := fmt.Sprintf(`
+        UPDATE users 
+        SET %s 
+        WHERE id = $%d`,
+		strings.Join(updates, ", "),
+		argCount,
+	)
+
+	log.Printf("Executing update query for user ID: %d", userID)
+	result, err := tx.Exec(query, args...)
+	if err != nil {
+		log.Printf("Failed to execute update query: %v", err)
+		return fmt.Errorf("database update error: %w", err)
+	}
+
+	// Verify that a row was actually updated
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Failed to get rows affected: %v", err)
+		return fmt.Errorf("database result error: %w", err)
+	}
+	if rowsAffected == 0 {
+		log.Printf("No rows were updated for user ID: %d", userID)
+		return fmt.Errorf("user not found")
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		log.Printf("Failed to commit transaction: %v", err)
+		return fmt.Errorf("transaction commit error: %w", err)
+	}
+
+	log.Printf("Successfully updated profile for user ID: %d", userID)
+	return nil
 }

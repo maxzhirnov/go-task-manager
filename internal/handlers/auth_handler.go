@@ -315,8 +315,16 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Generate new access token using claims from refresh token
-	accessToken, err := h.GenerateJWT(claims.UserID, claims.Username)
+	// Fetch latest user data from database
+	user, err := models.GetUserByID(h.DB, claims.UserID)
+	if err != nil {
+		log.Printf("Failed to fetch user data: %v", err)
+		JSONError(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Generate new access token using latest user data
+	accessToken, err := h.GenerateJWT(user.ID, user.Username)
 	if err != nil {
 		log.Printf("Failed to generate new access token: %v", err)
 		JSONError(w, "Failed to generate access token", http.StatusInternalServerError)

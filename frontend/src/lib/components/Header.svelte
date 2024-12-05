@@ -3,6 +3,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
 
+
     function logout() {
         localStorage.removeItem("jwt");
         localStorage.removeItem("refresh_token");
@@ -23,7 +24,13 @@
         </nav>
     </div>
     <div class="user-info">
-        <span>Welcome, {$user}</span>
+        {#if $user}
+            <span>Welcome, 
+                <a href="/profile" class="profile-link" on:click|preventDefault={() => goto('/profile')}>
+                    {$user.username}
+                </a>
+            </span>
+        {/if}
         <button class="logout-btn" on:click={logout}>Logout</button>
     </div>
 </div>
@@ -36,6 +43,12 @@
 
     .title-link {
         text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+    }
+
+    .profile-link {
+        /* text-decoration: none; */
         color: inherit;
         cursor: pointer;
     }

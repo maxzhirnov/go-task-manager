@@ -28,7 +28,6 @@ export async function fetchWithAuth(url, options = {}) {
         }
         return response;
     } catch (error) {
-        showError(error.message);
         console.error("Request failed:", error);
         throw error;
     }
@@ -51,7 +50,6 @@ export async function refreshTokenRequest() {
         localStorage.setItem("jwt", access_token);
         return access_token;
     } catch (error) {
-        showError(error.message);
         localStorage.removeItem("jwt");
         localStorage.removeItem("refresh_token");
         return null;
@@ -61,11 +59,16 @@ export async function refreshTokenRequest() {
 export async function handleApiRequest(url, options = {}) {
     try {
         const response = await fetchWithAuth(url, options);
-        if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const error = new Error(errorData.error || response.statusText);
+            error.status = response.status;
+            error.details = errorData;
+            throw error;
+        }
         if (response.status === 204) return null;
         return await response.json();
     } catch (error) {
-        showError(error.message);
         throw error;
     }
 }
@@ -132,6 +135,48 @@ export const api = {
             method: "GET",
             headers: { "Content-Type": "application/json" }
         });
+    },
+
+    updateProfile: async (data) => {
+        return handleApiRequest('/api/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+    },
+
+    refreshToken: async () => {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) {
+            console.error('No refresh token found');
+            return null;
+        }
+    
+        try {
+            console.log('Attempting to refresh token');
+            const response = await fetch('/api/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshToken })
+            });
+    
+            if (!response.ok) {
+                throw new Error(`Refresh failed: ${response.statusText}`);
+            }
+    
+            const data = await response.json();
+            console.log('Token refresh successful');
+            console.log(data);
+            
+            if (data.access_token) {
+                localStorage.setItem('jwt', data.access_token);
+                return data.access_token;
+            }
+            return null;
+        } catch (error) {
+            console.error('Token refresh failed:', error);
+            return null;
+        }
     }
 };
 

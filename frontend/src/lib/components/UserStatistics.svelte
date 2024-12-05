@@ -11,8 +11,18 @@
         ? Math.round((statistics.completed_tasks / statistics.total_tasks) * 100) 
         : 0;
     
+    $: trend = formatTrend(statistics);
+    $: completionStatus = getCompletionStatus(statistics);
+    $: pendingTrend = getPendingTrend(statistics);
+    $: activityStatus = getActivityStatus(statistics);
+    $: completedPercentage = statistics ? 
+        Math.round((statistics.completed_tasks / statistics.total_tasks) * 100) || 0 : 0;
+    $: inProgressPercentage = statistics ? 
+        Math.round((statistics.in_progress_tasks / statistics.total_tasks) * 100) || 0 : 0;
+    $: pendingPercentage = statistics ? 
+        Math.round((statistics.pending_tasks / statistics.total_tasks) * 100) || 0 : 0;
 
-        function formatTrend(stats) {
+    function formatTrend(stats) {
         if (!stats) return { text: '0%', class: 'neutral' };
         
         const value = stats.weekly_trend_value;
@@ -29,8 +39,6 @@
             class: className
         };
     }
-
-    $: trend = formatTrend(statistics);
 
     function getCompletionStatus(stats) {
         if (!stats) return { text: 'No Data', class: 'neutral' };
@@ -53,7 +61,6 @@
         }
     }
 
-    $: completionStatus = getCompletionStatus(statistics);
 
     function getPendingTrend(stats) {
         if (!stats) return { text: '= No change', class: 'neutral' };
@@ -77,7 +84,6 @@
         };
     }
 
-    $: pendingTrend = getPendingTrend(statistics);
 
     function getActivityStatus(stats) {
         if (!stats || !stats.average_daily_tasks) {
@@ -101,16 +107,6 @@
         }
     }
 
-    $: activityStatus = getActivityStatus(statistics);
-
-
-    $: completedPercentage = statistics ? 
-        Math.round((statistics.completed_tasks / statistics.total_tasks) * 100) || 0 : 0;
-    $: inProgressPercentage = statistics ? 
-        Math.round((statistics.in_progress_tasks / statistics.total_tasks) * 100) || 0 : 0;
-    $: pendingPercentage = statistics ? 
-        Math.round((statistics.pending_tasks / statistics.total_tasks) * 100) || 0 : 0;
-    
     // Animation trigger
     let isVisible = false;
     onMount(() => {

@@ -2,7 +2,8 @@
     import ErrorMessage from '$lib/components/ErrorMessage.svelte';
     import Header from '$lib/components/Header.svelte';
     import { onMount } from 'svelte';
-    import { initializeUser } from '$lib/auth.js';
+    import { initializeUser } from '$lib/stores.js';
+    import Notification from '$lib/components/Notification.svelte';
 
     let appName = "ActionHub";
     let pageTitle = $$props.title || "Tasks";
@@ -19,7 +20,10 @@
 
 <Header />
 <ErrorMessage />
+
 <slot />
+
+<Notification />
 
 <style>
     :global(body) {

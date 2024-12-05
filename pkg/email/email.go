@@ -4,6 +4,7 @@ package email
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"gopkg.in/mail.v2"
@@ -18,6 +19,8 @@ type EmailSender interface {
 
 	// SendVerificationEmail sends an email verification link
 	SendVerificationEmail(to, username, token string) error
+
+	SendPasswordResetEmail(email, resetLins string) error
 }
 
 // EmailService implements the EmailSender interface and handles
@@ -142,4 +145,48 @@ func (s *EmailService) SendVerificationEmail(to, username, token string) error {
 
 	m.SetBody("text/html", body)
 	return s.dialer.DialAndSend(m)
+}
+
+type PasswordResetEmailData struct {
+	ResetLink string
+	IPAddress string
+	Year      int
+}
+
+func (s *EmailService) SendPasswordResetEmail(to, resetLink string) error {
+	log.Printf("Sending password reset email to: %s", to)
+
+	// Create email message
+	m := mail.NewMessage()
+	m.SetHeader("From", s.from)
+	m.SetHeader("To", to)
+	m.SetHeader("Subject", "Reset Your Password - ActionHub")
+
+	// Get IP address from request context (you might need to pass this through)
+	ipAddress := "Unknown" // In production, get this from the request
+
+	// Prepare template data
+	data := PasswordResetEmailData{
+		ResetLink: resetLink,
+		IPAddress: ipAddress,
+		Year:      time.Now().Year(),
+	}
+
+	// Execute template
+	body, err := s.templates.ExecuteTemplate("password-reset.html", data)
+	if err != nil {
+		log.Printf("Failed to execute password reset email template: %v", err)
+		return fmt.Errorf("failed to execute email template: %v", err)
+	}
+
+	m.SetBody("text/html", body)
+
+	// Send email
+	if err := s.dialer.DialAndSend(m); err != nil {
+		log.Printf("Failed to send password reset email: %v", err)
+		return fmt.Errorf("failed to send email: %v", err)
+	}
+
+	log.Printf("Successfully sent password reset email to: %s", to)
+	return nil
 }

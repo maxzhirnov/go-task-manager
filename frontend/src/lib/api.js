@@ -1,6 +1,22 @@
 const API_URL = '/api/tasks';
 const USER_API_URL = '/api/users';
 
+export async function handlePublicRequest(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const error = new Error(errorData.error || response.statusText);
+            error.status = response.status;
+            error.details = errorData;
+            throw error;
+        }
+        if (response.status === 204) return null;
+        return await response.json();
+    } catch (error) {
+        throw error;
+    }
+}
 
 export async function fetchWithAuth(url, options = {}) {
     try {
@@ -177,6 +193,22 @@ export const api = {
             console.error('Token refresh failed:', error);
             return null;
         }
-    }
+    },
+
+    requestPasswordReset: async (data) => {
+        return handlePublicRequest('/api/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+    },
+
+    resetPassword: async (data) => {
+        return handlePublicRequest('/api/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+    },
 };
 

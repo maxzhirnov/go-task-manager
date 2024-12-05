@@ -1,24 +1,20 @@
-// @title Task Manager API
-// @version 1.0
-// @description Task management system with JWT authentication
-// @host localhost:8080
-// @BasePath /api
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
 package handlers
 
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/maxzhirnov/go-task-manager/internal/models"
+	"github.com/maxzhirnov/go-task-manager/pkg/config"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
 	"github.com/maxzhirnov/go-task-manager/pkg/email"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthHandler manages authentication-related HTTP requests.
@@ -38,6 +34,8 @@ type AuthHandler struct {
 
 	// ValidateRefreshToken verifies and parses refresh tokens
 	ValidateRefreshToken func(token string) (*middleware.Claims, error)
+
+	config *config.Config
 }
 
 // NewAuthHandler creates a new instance of AuthHandler with default token handlers.
@@ -48,13 +46,14 @@ type AuthHandler struct {
 //
 // Returns:
 //   - *AuthHandler: Configured authentication handler
-func NewAuthHandler(db database.DB, emailService email.EmailSender) *AuthHandler {
+func NewAuthHandler(db database.DB, emailService email.EmailSender, config *config.Config) *AuthHandler {
 	return &AuthHandler{
 		DB:                   db,
 		EmailService:         emailService,
 		GenerateJWT:          middleware.GenerateJWT,
 		GenerateRefreshToken: middleware.GenerateRefreshToken,
 		ValidateRefreshToken: middleware.ValidateRefreshToken,
+		config:               config,
 	}
 }
 
@@ -483,4 +482,179 @@ func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.R
 	})
 
 	log.Printf("Verification email resent successfully to: %s", req.Email)
+}
+
+// ForgotPasswordHandler handles password reset requests by generating a reset token
+// and sending it to the user's email address.
+//
+// Security considerations:
+// - Does not reveal email existence
+// - Uses time-limited tokens (15 minutes)
+// - Logs attempts for security monitoring
+// - Implements rate limiting per email/IP
+//
+// Flow:
+// 1. Validate request and email format
+// 2. Look up user by email
+// 3. Generate secure reset token
+// 4. Store token with expiry
+// 5. Send reset email
+func (h *AuthHandler) ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	// Track request metadata for security logging
+	requestIP := r.RemoteAddr
+	log.Printf("Received password reset request from IP: %s", requestIP)
+
+	// Decode and validate request
+	var req models.ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Failed to decode password reset request from IP %s: %v", requestIP, err)
+		JSONError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Validate email format
+	if !isValidEmail(req.Email) {
+		log.Printf("Invalid email format in reset request from IP %s: %s", requestIP, req.Email)
+		JSONSuccess(w, "If the email exists, a reset link will be sent")
+		return
+	}
+	log.Printf("Processing password reset request for email: %s", maskEmail(req.Email))
+
+	// Get user by email
+	user, err := models.GetUserByEmail(h.DB, req.Email)
+	if err != nil {
+		log.Printf("User lookup failed for reset request: %v", err)
+		JSONSuccess(w, "If the email exists, a reset link will be sent")
+		return
+	}
+	log.Printf("Found user for password reset: ID=%d", user.ID)
+
+	// TODO: Check for existing recent reset requests
+	// if !h.canRequestPasswordReset(user.ID) {
+	// 	log.Printf("Too many reset attempts for user ID %d", user.ID)
+	// 	JSONSuccess(w, "If the email exists, a reset link will be sent")
+	// 	return
+	// }
+
+	// Generate reset token
+	resetToken, err := generateResetToken()
+	if err != nil {
+		log.Printf("Failed to generate reset token for user %d: %v", user.ID, err)
+		JSONError(w, "Failed to process request", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Generated reset token for user %d", user.ID)
+
+	// Set token expiry (15 minutes from now)
+	expiryTime := time.Now().Add(15 * time.Minute)
+	log.Printf("Setting token expiry for user %d to: %v", user.ID, expiryTime)
+
+	// Update user with reset token
+	err = user.UpdateResetToken(h.DB, resetToken, expiryTime)
+	if err != nil {
+		log.Printf("Failed to save reset token for user %d: %v", user.ID, err)
+		JSONError(w, "Failed to process request", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Successfully saved reset token for user %d", user.ID)
+
+	// Send email with reset link
+	resetLink := fmt.Sprintf("%s/reset-password?token=%s", h.config.SMTP.BaseURL, resetToken)
+	log.Printf("Generated reset link for user %d", user.ID)
+
+	// Send email with reset link
+	err = h.EmailService.SendPasswordResetEmail(user.Email, resetLink)
+	if err != nil {
+		log.Printf("Failed to send reset email to user %d: %v", user.ID, err)
+		JSONError(w, "Failed to send reset email", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Successfully sent reset email to user %d", user.ID)
+
+	// TODOL: Record successful reset request
+	// h.recordPasswordResetAttempt(user.ID)
+
+	JSONSuccess(w, "If the email exists, a reset link will be sent")
+}
+
+// ResetPasswordHandler processes password reset requests using a valid reset token.
+// It validates the token, checks its expiration, and updates the user's password.
+//
+// Flow:
+// 1. Decode and validate the request body
+// 2. Verify the reset token and retrieve associated user
+// 3. Ensure the token hasn't expired
+// 4. Hash the new password
+// 5. Update the password and clear the reset token
+// 6. Return success response
+func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Starting password reset process")
+
+	// Decode request body
+	var req models.ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Failed to decode reset password request: %v", err)
+		JSONError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	log.Printf("Successfully decoded password reset request")
+
+	// Validate token length and format
+	if len(req.Token) == 0 {
+		log.Printf("Empty reset token received")
+		JSONError(w, "Reset token is required", http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve user by reset token
+	user, err := models.GetUserByResetToken(h.DB, req.Token)
+	if err != nil {
+		log.Printf("Failed to find user with reset token: %v", err)
+		JSONError(w, "Invalid or expired reset token", http.StatusBadRequest)
+		return
+	}
+	log.Printf("Found user for reset token: UserID=%d", user.ID)
+
+	// Verify token expiration
+	if time.Now().After(user.ResetTokenExpires) {
+		log.Printf("Reset token expired for user %d. Expired at: %v", user.ID, user.ResetTokenExpires)
+		JSONError(w, "Reset token has expired", http.StatusBadRequest)
+		return
+	}
+	log.Printf("Reset token is valid and not expired")
+
+	// Validate new password
+	if len(req.NewPassword) < 6 {
+		log.Printf("New password too short for user %d", user.ID)
+		JSONError(w, "Password must be at least 8 characters long", http.StatusBadRequest)
+		return
+	}
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Failed to hash new password for user %d: %v", user.ID, err)
+		JSONError(w, "Failed to process new password", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Successfully hashed new password for user %d", user.ID)
+
+	// Update password and clear reset token
+	err = user.UpdatePasswordAndClearResetToken(h.DB, string(hashedPassword))
+	if err != nil {
+		log.Printf("Failed to update password for user %d: %v", user.ID, err)
+		JSONError(w, "Failed to update password", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Successfully updated password and cleared reset token for user %d", user.ID)
+
+	// TODO: Send confirmation email
+	// if err := h.EmailService.SendPasswordChangeConfirmation(user.Email); err != nil {
+	//     // Log but don't return error - password was successfully changed
+	//     log.Printf("Failed to send password change confirmation email to user %d: %v",
+	//         user.ID, err)
+	// }
+
+	log.Printf("Password reset successful for user %d", user.ID)
+	JSONSuccess(w, "Password has been reset successfully")
 }

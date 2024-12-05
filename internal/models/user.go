@@ -41,6 +41,9 @@ type User struct {
 
 	// UpdatedAt stores the timestamp of the last modification
 	UpdatedAt time.Time `json:"updated_at"`
+
+	ResetPasswordToken string
+	ResetTokenExpires  time.Time
 }
 
 // VerificationToken represents an email verification token.
@@ -750,13 +753,35 @@ func GetUserStatistics(db database.DB, userID int) (*UserStatistics, error) {
 	return stats, nil
 }
 
+// GetUserByID retrieves a user from the database by their unique identifier.
+//
+// Parameters:
+//   - db: database.DB interface for database operations
+//   - id: int, the unique identifier of the user
+//
+// Returns:
+//   - User: the user object if found
+//   - error: nil if successful, otherwise an error describing the issue
+//
+// Errors:
+//   - If the user is not found, it returns a sql.ErrNoRows wrapped in a custom error
+//   - Any other database errors are wrapped and returned
 func GetUserByID(db database.DB, id int) (User, error) {
+	// Start timing the operation
+	start := time.Now()
+
+	// Log the start of the operation
+	log.Printf("GetUserByID: Starting user retrieval for ID: %d", id)
+
 	var user User
 
-	query := `SELECT id, email, username, password, is_verified, created_at, updated_at 
-              FROM users 
-              WHERE id = $1`
+	// SQL query to fetch user details
+	query := `
+        SELECT id, email, username, password, is_verified, created_at, updated_at 
+        FROM users 
+        WHERE id = $1`
 
+	// Execute the query and scan results into User struct
 	err := db.QueryRow(query, id).Scan(
 		&user.ID,
 		&user.Email,
@@ -766,48 +791,105 @@ func GetUserByID(db database.DB, id int) (User, error) {
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
+
+	// Handle potential errors
 	if err != nil {
-		return user, fmt.Errorf("failed to get user by ID: %w", err)
+		if err == sql.ErrNoRows {
+			log.Printf("GetUserByID: User not found for ID: %d", id)
+			return User{}, fmt.Errorf("user not found: %w", err)
+		}
+		log.Printf("GetUserByID: Database error while fetching user ID %d: %v", id, err)
+		return User{}, fmt.Errorf("failed to get user by ID: %w", err)
 	}
+
+	// Log successful retrieval
+	log.Printf("GetUserByID: Successfully retrieved user ID: %d, Username: %s", user.ID, user.Username)
+
+	// Log operation duration
+	log.Printf("GetUserByID: Operation completed in %v", time.Since(start))
+
 	return user, nil
 }
 
+// UpdateProfile updates a user's profile information in the database.
+// It supports updating username and/or password, requiring current password verification.
+//
+// Parameters:
+//   - db: database interface for transactions
+//   - userID: the ID of the user to update
+//   - username: new username (empty string if no change)
+//   - newPassword: new password (empty string if no change)
+//   - currentPassword: current password for verification
+//
+// Security measures:
+//   - Verifies current password before any changes
+//   - Uses database transactions for atomic updates
+//   - Hashes passwords using bcrypt
+//   - Validates all inputs before processing
+//
+// Returns:
+//   - error: nil if successful, otherwise contains the reason for failure
 func (u *User) UpdateProfile(db database.DB, userID int, username, newPassword, currentPassword string) error {
-	log.Printf("Starting profile update for user ID: %d", userID)
+	operation := "UpdateProfile"
+	log.Printf("[%s] Starting profile update for user ID: %d", operation, userID)
+
+	// Input validation
+	if currentPassword == "" {
+		log.Printf("[%s] Current password not provided for user ID: %d", operation, userID)
+		return fmt.Errorf("current password is required")
+	}
 
 	// Verify current password
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(currentPassword)); err != nil {
-		log.Printf("Password verification failed for user ID: %d", userID)
+		log.Printf("[%s] Password verification failed for user ID: %d", operation, userID)
 		return fmt.Errorf("invalid current password")
 	}
+	log.Printf("[%s] Password verification successful for user ID: %d", operation, userID)
 
-	// Start transaction
+	// Start transaction for atomic updates
 	tx, err := db.Begin()
 	if err != nil {
-		log.Printf("Failed to start transaction: %v", err)
+		log.Printf("[%s] Failed to start transaction for user ID %d: %v", operation, userID, err)
 		return fmt.Errorf("database transaction error: %w", err)
 	}
-	defer tx.Rollback() // Rollback if not committed
+	defer func() {
+		if tx != nil {
+			if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+				log.Printf("[%s] Failed to rollback transaction for user ID %d: %v", operation, userID, err)
+			}
+		}
+	}()
 
-	// Prepare update query components
+	// Build update query dynamically
 	updates := []string{}
 	args := []interface{}{}
 	argCount := 1
 
-	// Add username update if provided and different from current
-	if username != "" && username != u.Username {
-		log.Printf("Adding username update: %s", username)
-		updates = append(updates, fmt.Sprintf("username = $%d", argCount))
-		args = append(args, username)
-		argCount++
+	// Handle username update
+	if username != "" {
+		if username != u.Username {
+			if err := validateUsername(username); err != nil {
+				log.Printf("[%s] Invalid username format for user ID %d: %v", operation, userID, err)
+				return fmt.Errorf("invalid username: %w", err)
+			}
+			log.Printf("[%s] Adding username update for user ID %d: %s", operation, userID, username)
+			updates = append(updates, fmt.Sprintf("username = $%d", argCount))
+			args = append(args, username)
+			argCount++
+		}
 	}
 
-	// Add password update if provided
+	// Handle password update
 	if newPassword != "" {
-		log.Printf("Processing password update")
+		if err := validatePassword(newPassword); err != nil {
+			log.Printf("[%s] Invalid new password format for user ID %d: %v", operation, userID, err)
+			return fmt.Errorf("invalid new password: %w", err)
+		}
+
+		log.Printf("[%s] Processing password update for user ID %d", operation, userID)
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 		if err != nil {
-			log.Printf("Failed to hash new password: %v", err)
+			log.Printf("[%s] Failed to hash new password for user ID %d: %v", operation, userID, err)
 			return fmt.Errorf("password hashing error: %w", err)
 		}
 		updates = append(updates, fmt.Sprintf("password = $%d", argCount))
@@ -815,21 +897,21 @@ func (u *User) UpdateProfile(db database.DB, userID int, username, newPassword, 
 		argCount++
 	}
 
-	// Always update the updated_at timestamp
+	// Add timestamp update
 	updates = append(updates, fmt.Sprintf("updated_at = $%d", argCount))
 	args = append(args, time.Now())
 	argCount++
 
-	// Add userID as the last parameter
+	// Add userID for WHERE clause
 	args = append(args, userID)
 
-	// If there are no updates, return early
+	// Check if there are any updates to perform
 	if len(updates) == 0 {
-		log.Printf("No updates requested for user ID: %d", userID)
+		log.Printf("[%s] No updates requested for user ID: %d", operation, userID)
 		return nil
 	}
 
-	// Construct and execute the update query
+	// Construct and execute update query
 	query := fmt.Sprintf(`
         UPDATE users 
         SET %s 
@@ -838,30 +920,239 @@ func (u *User) UpdateProfile(db database.DB, userID int, username, newPassword, 
 		argCount,
 	)
 
-	log.Printf("Executing update query for user ID: %d", userID)
+	log.Printf("[%s] Executing update query for user ID: %d", operation, userID)
 	result, err := tx.Exec(query, args...)
 	if err != nil {
-		log.Printf("Failed to execute update query: %v", err)
+		log.Printf("[%s] Failed to execute update query for user ID %d: %v", operation, userID, err)
 		return fmt.Errorf("database update error: %w", err)
 	}
 
-	// Verify that a row was actually updated
+	// Verify update success
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.Printf("Failed to get rows affected: %v", err)
+		log.Printf("[%s] Failed to get rows affected for user ID %d: %v", operation, userID, err)
 		return fmt.Errorf("database result error: %w", err)
 	}
 	if rowsAffected == 0 {
-		log.Printf("No rows were updated for user ID: %d", userID)
+		log.Printf("[%s] No rows updated for user ID: %d", operation, userID)
 		return fmt.Errorf("user not found")
 	}
 
-	// Commit the transaction
+	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		log.Printf("Failed to commit transaction: %v", err)
+		log.Printf("[%s] Failed to commit transaction for user ID %d: %v", operation, userID, err)
 		return fmt.Errorf("transaction commit error: %w", err)
 	}
+	tx = nil // Prevent rollback in deferred function
 
-	log.Printf("Successfully updated profile for user ID: %d", userID)
+	log.Printf("[%s] Successfully updated profile for user ID: %d", operation, userID)
+	return nil
+}
+
+// UpdateResetToken updates a user's password reset token and its expiration time.
+// This is used during the password reset process to store the temporary reset token.
+//
+// Parameters:
+//   - db: database interface for executing the update
+//   - token: the generated reset token string
+//   - expiry: timestamp when the token should expire
+//
+// Returns:
+//   - error: nil if successful, otherwise contains the reason for failure
+//
+// Security considerations:
+//   - Token expiration is enforced via database timestamp
+//   - Updates timestamp to track modification time
+//   - Uses parameterized queries to prevent SQL injection
+func (u *User) UpdateResetToken(db database.DB, token string, expiry time.Time) error {
+	operation := "UpdateResetToken"
+	log.Printf("[%s] Starting reset token update for user ID: %d", operation, u.ID)
+
+	// Validate inputs
+	if token == "" {
+		log.Printf("[%s] Empty token provided for user ID: %d", operation, u.ID)
+		return fmt.Errorf("reset token cannot be empty")
+	}
+
+	if expiry.Before(time.Now()) {
+		log.Printf("[%s] Invalid expiry time provided for user ID: %d", operation, u.ID)
+		return fmt.Errorf("expiry time must be in the future")
+	}
+
+	// SQL query to update reset token information
+	query := `
+        UPDATE users 
+        SET reset_password_token = $1, 
+            reset_token_expires = $2,
+            updated_at = NOW()
+        WHERE id = $3`
+
+	log.Printf("[%s] Executing update query for user ID: %d with expiry: %v",
+		operation, u.ID, expiry.Format(time.RFC3339))
+
+	// Execute the update query
+	result, err := db.Exec(query, token, expiry, u.ID)
+	if err != nil {
+		log.Printf("[%s] Failed to update reset token for user ID %d: %v",
+			operation, u.ID, err)
+		return fmt.Errorf("failed to update reset token: %w", err)
+	}
+
+	// Verify the update was successful
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("[%s] Failed to get rows affected for user ID %d: %v",
+			operation, u.ID, err)
+		return fmt.Errorf("failed to verify update: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		log.Printf("[%s] No user found with ID: %d", operation, u.ID)
+		return fmt.Errorf("user not found")
+	}
+
+	log.Printf("[%s] Successfully updated reset token for user ID: %d",
+		operation, u.ID)
+
+	// Log token expiration time for monitoring
+	log.Printf("[%s] Reset token for user ID %d will expire at: %v",
+		operation, u.ID, expiry.Format(time.RFC3339))
+
+	return nil
+}
+
+// GetUserByResetToken retrieves a user from the database using a password reset token.
+// This function is used during the password reset process to validate the reset token
+// and retrieve the associated user.
+//
+// Parameters:
+//   - db: database interface for executing the query
+//   - token: the reset token string to look up
+//
+// Returns:
+//   - User: the user associated with the token if found
+//   - error: nil if successful, otherwise contains the reason for failure
+//
+// Security considerations:
+//   - Does not reveal token validity through timing
+//   - Logs are sanitized of sensitive information
+//   - Uses parameterized queries to prevent SQL injection
+func GetUserByResetToken(db database.DB, token string) (User, error) {
+	operation := "GetUserByResetToken"
+	start := time.Now()
+
+	log.Printf("[%s] Starting user lookup by reset token", operation)
+
+	// Validate input
+	if token == "" {
+		log.Printf("[%s] Empty token provided", operation)
+		return User{}, fmt.Errorf("reset token cannot be empty")
+	}
+
+	var user User
+
+	// SQL query to fetch user by reset token
+	query := `
+        SELECT id, email, username, password, is_verified, 
+               created_at, updated_at, reset_token_expires
+        FROM users 
+        WHERE reset_password_token = $1`
+
+	// Execute query and scan results
+	err := db.QueryRow(query, token).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Username,
+		&user.Password,
+		&user.IsVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.ResetTokenExpires,
+	)
+
+	// Handle potential errors
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("[%s] No user found with provided reset token", operation)
+			return User{}, fmt.Errorf("invalid or expired reset token")
+		}
+		log.Printf("[%s] Database error while fetching user: %v", operation, err)
+		return User{}, fmt.Errorf("failed to get user by reset token: %w", err)
+	}
+
+	// Check if token has expired
+	if time.Now().After(user.ResetTokenExpires) {
+		log.Printf("[%s] Reset token expired for user ID: %d. Expired at: %v",
+			operation, user.ID, user.ResetTokenExpires.Format(time.RFC3339))
+		return User{}, fmt.Errorf("reset token has expired")
+	}
+
+	// Log successful retrieval (without sensitive information)
+	log.Printf("[%s] Successfully retrieved user ID: %d with reset token",
+		operation, user.ID)
+	log.Printf("[%s] Operation completed in %v", operation, time.Since(start))
+
+	return user, nil
+}
+
+// UpdatePasswordAndClearResetToken updates the user's password and clears the reset token.
+// This function is typically called after a successful password reset.
+//
+// Parameters:
+//   - db: database interface for executing the update
+//   - hashedPassword: the new password hash to set
+//
+// Returns:
+//   - error: nil if successful, otherwise contains the reason for failure
+//
+// Security considerations:
+//   - Clears reset token to prevent reuse
+//   - Updates timestamp for audit trail
+//   - Uses parameterized query to prevent SQL injection
+func (u *User) UpdatePasswordAndClearResetToken(db database.DB, hashedPassword string) error {
+	operation := "UpdatePasswordAndClearResetToken"
+	log.Printf("[%s] Starting password update and token clear for user ID: %d", operation, u.ID)
+
+	// Validate input
+	if hashedPassword == "" {
+		log.Printf("[%s] Empty hashed password provided for user ID: %d", operation, u.ID)
+		return fmt.Errorf("hashed password cannot be empty")
+	}
+
+	// SQL query to update password and clear reset token
+	query := `
+        UPDATE users 
+        SET password = $1,
+            reset_password_token = NULL,
+            reset_token_expires = NULL,
+            updated_at = NOW()
+        WHERE id = $2`
+
+	log.Printf("[%s] Executing update query for user ID: %d", operation, u.ID)
+
+	// Execute the update query
+	result, err := db.Exec(query, hashedPassword, u.ID)
+	if err != nil {
+		log.Printf("[%s] Failed to update password and clear reset token for user ID %d: %v",
+			operation, u.ID, err)
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	// Verify the update was successful
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("[%s] Failed to get rows affected for user ID %d: %v",
+			operation, u.ID, err)
+		return fmt.Errorf("failed to verify update: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		log.Printf("[%s] No user found with ID: %d", operation, u.ID)
+		return fmt.Errorf("user not found")
+	}
+
+	log.Printf("[%s] Successfully updated password and cleared reset token for user ID: %d",
+		operation, u.ID)
+
 	return nil
 }

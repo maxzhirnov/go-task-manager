@@ -9,7 +9,9 @@
 
     onMount(() => {
         const token = localStorage.getItem('jwt');
-        if (token) {
+        const isResetPasswordPage = window.location.pathname.startsWith('/reset-password');
+        
+        if (token && !isResetPasswordPage) {
             goto('/tasks');
         } else {
             isLoading = false;

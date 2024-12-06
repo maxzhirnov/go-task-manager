@@ -2,6 +2,7 @@ package models
 
 import "fmt"
 
+// validateUsername validates the username
 func validateUsername(username string) error {
 	if len(username) < 3 {
 		return fmt.Errorf("username must be at least 3 characters long")
@@ -13,6 +14,7 @@ func validateUsername(username string) error {
 	return nil
 }
 
+// validatePassword validates the password
 func validatePassword(password string) error {
 	if len(password) < 6 {
 		return fmt.Errorf("password must be at least 8 characters long")

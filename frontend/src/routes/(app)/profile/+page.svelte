@@ -4,21 +4,27 @@
     import { api } from '$lib/api';
     import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
     import UserStatistics from '$lib/components/UserStatistics.svelte';
+    import Logo12 from '$lib/components/logos/Logo12.svelte';
+    import Logo11 from '$lib/components/logos/Logo11.svelte';
 
     let loading = false;
-    let showPasswordForm = false;
+
+    
+
     let formData = {
         username: $user?.username || '',
         currentPassword: '',
         newPassword: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        email: ''
     };
 
     let formErrors = {
         username: '',
         currentPassword: '',
         newPassword: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        email: ''
     };
 
 
@@ -146,6 +152,37 @@
             loading = false;
         }
     }
+
+    async function updatePasswordThroughEmail(email) {
+        
+        if (!email.trim()) {
+            formErrors.email = 'Please enter your email';
+            return;
+        }
+
+        loading = true;
+
+        try {
+            const response = await api.requestPasswordReset({ email });
+            showSuccess('Password reset link has been sent to your email');
+        } catch (error) {
+            formErrors.email = 'Failed to send reset link. Please try again.'
+            showError('Failed to send reset link. Please try again.');
+            if (error.status === 404) {
+                formErrors.email = 'Email not found';
+                showError('Email not found');
+            } else if (error.status === 429) {
+                formErrors.email = 'Too many reset attempts. Please try again later.';
+                showError('Too many reset attempts. Please try again later.');
+            } else {
+                formErrors.email = 'Failed to send reset link. Please try again.';
+                showError('Failed to send reset link. Please try again.');
+            }
+        } finally {
+            formErrors.email = '';
+            loading = false;
+        }
+    }
 </script>
 
 <div class="container">
@@ -199,72 +236,25 @@
                 <h2>Password</h2>
             </div>
             <div class="card-content">
-                {#if !showPasswordForm}
-                    <button 
-                        class="secondary-button" 
-                        on:click={() => showPasswordForm = true}
-                    >
-                        Change Password
-                    </button>
-                {:else}
-                    <form on:submit|preventDefault={updatePassword}>
-                        <div class="form-group">
-                            <input
-                                type="password"
-                                bind:value={formData.currentPassword}
-                                placeholder="Current password"
-                                class:error={formErrors.currentPassword}
-                                required
-                            />
-                            {#if formErrors.currentPassword}
-                                <span class="error-message">{formErrors.currentPassword}</span>
-                            {/if}
-                        </div>
-        
-                        <div class="form-group">
-                            <input
-                                type="password"
-                                bind:value={formData.newPassword}
-                                placeholder="New password"
-                                class:error={formErrors.newPassword}
-                                required
-                            />
-                            {#if formErrors.newPassword}
-                                <span class="error-message">{formErrors.newPassword}</span>
-                            {/if}
-                        </div>
-        
-                        <div class="form-group">
-                            <input
-                                type="password"
-                                bind:value={formData.confirmPassword}
-                                placeholder="Confirm new password"
-                                class:error={formErrors.confirmPassword}
-                                required
-                            />
-                            {#if formErrors.confirmPassword}
-                                <span class="error-message">{formErrors.confirmPassword}</span>
-                            {/if}
-                        </div>
-        
-                        <div class="button-group">
-                            <button 
-                                type="button" 
-                                class="text-button"
-                                on:click={() => showPasswordForm = false}
-                            >
-                                Cancel
-                            </button>
-                            <button type="submit" class="primary-button">
-                                Update Password
-                            </button>
-                        </div>
-                    </form>
-                {/if}
+                <div class="form-group">
+                    <input 
+                        type="email"
+                        bind:value={formData.email} 
+                        placeholder="Enter your login email"
+                        class:error={formErrors.email}
+                    />
+                    {#if formErrors.email}
+                        <span class="error-message">{formErrors.email}</span>
+                    {/if}
+                </div>
+  
+                <button class="primary-button" on:click={() => updatePasswordThroughEmail(formData.email)}>
+                    Change Password
+                </button>
             </div>
         </div>
 
-
+        <Logo12 clickable={false} />
     {/if}
 </div>
 

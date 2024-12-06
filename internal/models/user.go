@@ -42,8 +42,11 @@ type User struct {
 	// UpdatedAt stores the timestamp of the last modification
 	UpdatedAt time.Time `json:"updated_at"`
 
+	// ResetPasswordToken is a token used to reset the user's password
 	ResetPasswordToken string
-	ResetTokenExpires  time.Time
+
+	// ResetPasswordExpires is the expiration date of the reset password token
+	ResetTokenExpires time.Time
 }
 
 // VerificationToken represents an email verification token.
@@ -96,14 +99,29 @@ type UserStatistics struct {
 	// TasksCreatedToday is the number of tasks created in the last 24 hours
 	TasksCreatedToday int `json:"tasks_created_today"`
 
-	TasksLastWeek        int     `json:"tasks_last_week"`
-	TasksThisWeek        int     `json:"tasks_this_week"`
-	WeeklyTrendUp        bool    `json:"weekly_trend_up"`
-	WeeklyTrendValue     int     `json:"weekly_trend_value"`
-	PendingTasksLastWeek int     `json:"pending_tasks_last_week"`
-	PendingTrendUp       bool    `json:"pending_trend_up"`
-	PendingTrendValue    int     `json:"pending_trend_value"`
-	AverageDailyTasks    float64 `json:"average_daily_tasks"`
+	// TasksLastWeek is the number of tasks created in the last week
+	TasksLastWeek int `json:"tasks_last_week"`
+
+	// TasksThisWeek is the number of tasks created in this week
+	TasksThisWeek int `json:"tasks_this_week"`
+
+	// WeeklyTrendUp indicates whether the trend for tasks created in the last week is up or down
+	WeeklyTrendUp bool `json:"weekly_trend_up"`
+
+	// WeeklyTrendValue is the value of the trend for tasks created in the last week
+	WeeklyTrendValue int `json:"weekly_trend_value"`
+
+	// PendingTasksLastWeek is the number of pending tasks in the last week
+	PendingTasksLastWeek int `json:"pending_tasks_last_week"`
+
+	// PendingTrendUp indicates whether the trend for pending tasks in the last week is up or down
+	PendingTrendUp bool `json:"pending_trend_up"`
+
+	// PendingTrendValue is the value of the trend for pending tasks in the last week
+	PendingTrendValue int `json:"pending_trend_value"`
+
+	// AverageDailyTasks is the average number of tasks created per day
+	AverageDailyTasks float64 `json:"average_daily_tasks"`
 }
 
 // GenerateVerificationToken creates a secure random token for email verification.

@@ -2,6 +2,7 @@
     import { user } from '../stores.js';
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
+    import Logo14 from './logos/Logo14.svelte';
 
 
     function logout() {
@@ -13,9 +14,7 @@
 
 <div class="header-container">
     <div class="title">
-        <a href="/tasks" class="title-link" on:click|preventDefault={() => goto('/tasks')}>
-            <h1>ActionHub</h1>
-        </a>
+        <Logo14 />
     </div>
     <div class="nav-section">
         <nav class="nav-links">

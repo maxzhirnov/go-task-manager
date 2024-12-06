@@ -24,7 +24,14 @@
                 new_password: newPassword
             });
             showSuccess('Password has been reset successfully');
-            goto('/login');
+            
+            // Check for refresh token and redirect accordingly
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (refreshToken) {
+                goto('/tasks');
+            } else {
+                goto('/login');
+            }
         } catch (error) {
             showError(error.message);
         } finally {

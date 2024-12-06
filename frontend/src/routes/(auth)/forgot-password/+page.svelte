@@ -7,25 +7,25 @@
     let submitted = false;
 
     async function handleSubmit() {
-        console.log('Starting password reset request');
+        // console.log('Starting password reset request');
         
         if (!email.trim()) {
-            console.log('Email validation failed: empty email');
+            // console.log('Email validation failed: empty email');
             showError('Please enter your email');
             return;
         }
 
-        console.log('Attempting password reset for email:', email);
+        // console.log('Attempting password reset for email:', email);
         loading = true;
 
         try {
-            console.log('Sending password reset request to API');
+            // console.log('Sending password reset request to API');
             const response = await api.requestPasswordReset({ email });
-            console.log('Password reset request response:', response);
+            // console.log('Password reset request response:', response);
             
             submitted = true;
             showSuccess('Password reset link has been sent to your email');
-            console.log('Password reset request successful');
+            // console.log('Password reset request successful');
         } catch (error) {
             console.error('Password reset request failed:', {
                 error: error,
@@ -43,7 +43,7 @@
                 showError('Failed to send reset link. Please try again.');
             }
         } finally {
-            console.log('Password reset request completed');
+            // console.log('Password reset request completed');
             loading = false;
         }
     }

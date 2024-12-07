@@ -384,9 +384,6 @@
                         </svg>
                         <span class="btn-label">EXECUTE</span>
                     </button>
-                </div>
-                
-                <div>
                     <button 
                         class="expand-btn" 
                         title="Expand parameters"
@@ -475,6 +472,11 @@
 </div>
 
 <style>
+    .quick-submit-btn-container {
+        display: flex;
+        gap: .5rem;
+    }
+
     .task-creation-container {
         background: #1c1c1c;
         border: 1px solid #0984e3;
@@ -707,6 +709,15 @@
         50% { opacity: 0.5; }
     }
     @media (max-width: 768px) {
+        .quick-submit-btn-container  {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .quick-submit-btn-container button {
+            width: 100%;
+        }
+
         .quick-add {
             flex-direction: column;
             gap: 0.8rem;
@@ -714,6 +725,8 @@
 
         .input-wrapper {
             width: 100%;
+            gap: 0;
+            padding: 0;
         }
 
         input, textarea, select {

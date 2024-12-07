@@ -107,6 +107,7 @@ type VerificationEmailData struct {
 	Username         string
 	VerificationLink string
 	Year             int
+	CurrentTime      string
 }
 
 // SendVerificationEmail sends an email with a verification link to a user.
@@ -135,6 +136,7 @@ func (s *EmailService) SendVerificationEmail(to, username, token string) error {
 		Username:         username,
 		VerificationLink: fmt.Sprintf("%s/verify-email?token=%s", s.baseURL, token),
 		Year:             time.Now().Year(),
+		CurrentTime:      time.Now().Format(time.RFC3339),
 	}
 
 	// Execute template
@@ -151,6 +153,7 @@ type PasswordResetEmailData struct {
 	ResetLink string
 	IPAddress string
 	Year      int
+	Timestamp string
 }
 
 func (s *EmailService) SendPasswordResetEmail(to, resetLink string) error {
@@ -170,6 +173,7 @@ func (s *EmailService) SendPasswordResetEmail(to, resetLink string) error {
 		ResetLink: resetLink,
 		IPAddress: ipAddress,
 		Year:      time.Now().Year(),
+		Timestamp: time.Now().Format(time.RFC3339),
 	}
 
 	// Execute template

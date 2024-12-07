@@ -133,7 +133,7 @@
     }
 
     .action {
-        color: #2d3436;
+        color: #fff;
         font-weight: bold;
         font-size: 1rem;
     }

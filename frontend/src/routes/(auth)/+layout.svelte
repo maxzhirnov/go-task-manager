@@ -32,6 +32,6 @@
 
 <style>
     .auth-layout {
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: 'JetBrains Mono', monospace;
     }
 </style>

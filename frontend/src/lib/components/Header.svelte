@@ -173,13 +173,14 @@
             <Logo14 />
         </div>
         <div class="nav-section">
-            <div class="terminal-box">
+            <!-- <div class="terminal-box"> -->
+                <div>
                 <div class="terminal-header">
-                    <span class="terminal-dots">
+                    <!-- <span class="terminal-dots">
                         <span class="dot"></span>
                         <span class="dot"></span>
                         <span class="dot"></span>
-                    </span>
+                    </span> -->
                     <span class="terminal-title">NAVIGATION.sys</span>
                 </div>
                 <nav class="nav-links">
@@ -223,8 +224,9 @@
 
 <style>
     .header-container {
+        margin-bottom: 1rem;
         background: #1c1c1c;
-        border-bottom: 1px solid #0984e3;
+        /* border-bottom: 1px solid #0984e3; */
         padding: 1rem 0;
         position: relative;
         font-family: "JetBrains Mono", monospace;
@@ -385,7 +387,7 @@
         }
 
         .user-terminal {
-            flex-direction: column;
+            /* flex-direction: column; */
             align-items: center;
             gap: 0.8rem;
         }
@@ -393,6 +395,13 @@
         .logout-btn {
             width: 100%;
             justify-content: center;
+        }
+
+        .nav-section {
+            order: 2;
+        }
+        .user-info {
+            order: 1;
         }
     }
 </style>

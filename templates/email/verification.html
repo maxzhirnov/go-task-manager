@@ -6,63 +6,183 @@
         .email-container {
             max-width: 600px;
             margin: 0 auto;
-            font-family: Arial, sans-serif;
+            font-family: 'Courier New', monospace;
             line-height: 1.6;
-            color: #333333;
+            color: #ffffff;
+            background-color: #1c1c1c;
+            border: 1px solid #0984e3;
         }
-        .header {
-            background-color: #4CAF50;
+
+        .terminal-header {
+            background-color: #2d3436;
             padding: 20px;
             text-align: center;
+            border-bottom: 1px solid rgba(9, 132, 227, 0.2);
         }
-        .header h1 {
-            color: white;
+
+        .terminal-title {
+            color: #00b894;
             margin: 0;
+            font-size: 24px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
-        .content {
-            padding: 20px;
-            background-color: #ffffff;
-        }
-        .button {
-            display: inline-block;
+
+        .system-status {
+            background-color: #2d3436;
             padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white !important;
-            text-decoration: none !important;
-            border-radius: 5px;
-            margin: 20px 0;
+            border-bottom: 1px solid rgba(9, 132, 227, 0.2);
         }
+
+        .status-line {
+            color: #00b894;
+            font-size: 12px;
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .content {
+            padding: 30px;
+            background-color: #1c1c1c;
+            background-image: 
+                radial-gradient(
+                    circle at 50% 50%,
+                    rgba(0, 184, 148, 0.05) 1px,
+                    transparent 1px
+                );
+            background-size: 10px 10px;
+        }
+
+        .user-greeting {
+            color: #0984e3;
+            font-size: 18px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(9, 132, 227, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .username {
+            color: #00b894;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .cyber-button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: transparent;
+            color: #00b894 !important;
+            text-decoration: none !important;
+            border: 1px solid #00b894;
+            border-radius: 3px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .cyber-button:hover {
+            background-color: rgba(0, 184, 148, 0.1);
+            box-shadow: 0 0 10px rgba(0, 184, 148, 0.3);
+        }
+
+        .warning-box {
+            border: 1px solid #ffd32a;
+            padding: 15px;
+            margin: 20px 0;
+            color: #ffd32a;
+            font-size: 14px;
+            background-color: rgba(255, 211, 42, 0.1);
+        }
+
+        .system-message {
+            background-color: #2d3436;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            border-left: 3px solid #0984e3;
+        }
+
         .footer {
             text-align: center;
             padding: 20px;
             font-size: 12px;
-            color: #666666;
+            color: #636e72;
+            background-color: #2d3436;
+            border-top: 1px solid rgba(9, 132, 227, 0.2);
         }
-        a {
-            color: #4CAF50;
-            text-decoration: none;
+
+        .matrix-code {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #00b894;
+            opacity: 0.3;
+            position: absolute;
+            right: 10px;
+            top: 10px;
         }
-        a.button:hover {
-            background-color: #45a049;
+
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+            
+            .content {
+                padding: 15px;
+            }
         }
     </style>
 </head>
-<body>
+<body style="margin: 0; padding: 20px; background-color: #0f1215;">
     <div class="email-container">
-        <div class="header">
-            <h1>Verify Your Email</h1>
+        <div class="terminal-header">
+            <h1 class="terminal-title">System Verification Required</h1>
         </div>
+
+        <div class="system-status">
+            <div class="status-line">> INITIALIZING VERIFICATION PROTOCOL</div>
+            <div class="status-line">> USER REGISTRATION: PENDING</div>
+            <div class="status-line">> AWAITING EMAIL VERIFICATION</div>
+        </div>
+
         <div class="content">
-            <h2>Hello, {{.Username}}!</h2>
-            <p>Thank you for registering with ActionHub. Please verify your email address to get started.</p>
-            <p>Click the button below to verify your email address:</p>
-            <a href="{{.VerificationLink}}" class="button">Verify Email</a>
-            <p>This link will expire in 24 hours.</p>
-            <p>If you didn't create an account with ActionHub, you can safely ignore this email.</p>
+            <div class="matrix-code">
+                01010110<br>
+                10101010<br>
+                01010101
+            </div>
+
+            <h2 class="user-greeting">
+                >> WELCOME, <span class="username">{{.Username}}</span>
+            </h2>
+            
+            <div class="system-message">
+                <p><strong>INITIALIZATION STATUS:</strong> Registration sequence initiated for ActionHub systems.</p>
+                <p><strong>REQUIRED ACTION:</strong> Email verification needed to complete user authentication.</p>
+            </div>
+            
+            <p>Execute the following command to verify your identity:</p>
+            
+            <a href="{{.VerificationLink}}" class="cyber-button">VERIFY_EMAIL_ADDRESS</a>
+            
+            <div class="warning-box">
+                <strong>SYSTEM NOTICE:</strong> Authentication token will expire in 24 hours.
+                <br>
+                <strong>TIMESTAMP:</strong> {{.CurrentTime}}
+            </div>
+
+            <p style="color: #ff6b6b;">If you did not initiate this registration sequence, terminate this process immediately by ignoring this transmission.</p>
         </div>
+
         <div class="footer">
-            <p>© {{.Year}} ActionHub. All rights reserved.</p>
-            <p>You received this email because you signed up for ActionHub.</p>
+            <p>© {{.Year}} ActionHub // All Systems Protected</p>
+            <p>This is an automated transmission from ActionHub Registration Protocol</p>
+            <p style="font-size: 10px; margin-top: 20px; color: #454545;">
+                CHECKSUM: 0xA5B7C9D2E4F6
+            </p>
         </div>
     </div>
 </body>

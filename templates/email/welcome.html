@@ -6,68 +6,201 @@
         .email-container {
             max-width: 600px;
             margin: 0 auto;
-            font-family: Arial, sans-serif;
+            font-family: 'Courier New', monospace;
             line-height: 1.6;
-            color: #333333;
+            color: #ffffff;
+            background-color: #1c1c1c;
+            border: 1px solid #0984e3;
         }
-        .header {
-            background-color: #4CAF50;
+
+        .terminal-header {
+            background-color: #2d3436;
             padding: 20px;
             text-align: center;
+            border-bottom: 1px solid rgba(9, 132, 227, 0.2);
         }
-        .header h1 {
-            color: white;
+
+        .terminal-title {
+            color: #00b894;
             margin: 0;
+            font-size: 24px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
-        .content {
-            padding: 20px;
-            background-color: #ffffff;
-        }
-        .button {
-            display: inline-block;
+
+        .system-status {
+            background-color: #2d3436;
             padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 20px 0;
+            border-bottom: 1px solid rgba(9, 132, 227, 0.2);
         }
+
+        .status-line {
+            color: #00b894;
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        .content {
+            padding: 30px;
+            background-color: #1c1c1c;
+            background-image: 
+                radial-gradient(
+                    circle at 50% 50%,
+                    rgba(0, 184, 148, 0.05) 1px,
+                    transparent 1px
+                );
+            background-size: 10px 10px;
+            position: relative;
+        }
+
+        .user-greeting {
+            color: #0984e3;
+            font-size: 18px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(9, 132, 227, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .username {
+            color: #00b894;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .features-grid {
+            background: #2d3436;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 3px solid #00b894;
+        }
+
+        .feature-item {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .feature-item::before {
+            content: '>>';
+            color: #00b894;
+            position: absolute;
+            left: 0;
+        }
+
+        .cyber-button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: transparent;
+            color: #00b894 !important;
+            text-decoration: none !important;
+            border: 1px solid #00b894;
+            border-radius: 3px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .cyber-button:hover {
+            background-color: rgba(0, 184, 148, 0.1);
+            box-shadow: 0 0 10px rgba(0, 184, 148, 0.3);
+        }
+
+        .system-message {
+            background-color: #2d3436;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            border-left: 3px solid #0984e3;
+        }
+
         .footer {
             text-align: center;
             padding: 20px;
             font-size: 12px;
-            color: #666666;
+            color: #636e72;
+            background-color: #2d3436;
+            border-top: 1px solid rgba(9, 132, 227, 0.2);
         }
-        a {
-            color: #4CAF50;
-            text-decoration: none;
+
+        .matrix-rain {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-family: monospace;
+            font-size: 10px;
+            color: #00b894;
+            opacity: 0.2;
+            line-height: 1;
         }
-        /* Specific style for the button link */
-        a.button:hover {
-            background-color: #45a049;
+
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+            
+            .content {
+                padding: 15px;
+            }
         }
     </style>
 </head>
-<body>
+<body style="margin: 0; padding: 20px; background-color: #0f1215;">
     <div class="email-container">
-        <div class="header">
-            <h1>Welcome to ActionHub!</h1>
+        <div class="terminal-header">
+            <h1 class="terminal-title">System Access Granted</h1>
         </div>
+
+        <div class="system-status">
+            <div class="status-line">> USER AUTHENTICATION: COMPLETE</div>
+            <div class="status-line">> SYSTEM ACCESS: GRANTED</div>
+            <div class="status-line">> INITIALIZING USER INTERFACE</div>
+        </div>
+
         <div class="content">
-            <h2>Hello, {{.Username}}!</h2>
-            <p>Thank you for registering with ActionHub. We're excited to have you on board!</p>
-            <p>With ActionHub, you can:</p>
-            <ul>
-                <li>Create and organize tasks</li>
-                <li>Track your progress</li>
-                <li>Collaborate with team members</li>
-            </ul>
-            <a href="{{.LoginURL}}" class="button">Get Started</a>
-            <p>If you have any questions, feel free to reach out to our support team.</p>
+            <div class="matrix-rain">
+                01010110<br>
+                10101010<br>
+                01010101
+            </div>
+
+            <h2 class="user-greeting">
+                >> WELCOME, <span class="username">{{.Username}}</span>
+            </h2>
+
+            <div class="system-message">
+                <p>Registration sequence complete. ActionHub systems are now accessible.</p>
+            </div>
+
+            <p>Your command center includes the following modules:</p>
+
+            <div class="features-grid">
+                <div class="feature-item">TASK_CREATION && ORGANIZATION_PROTOCOLS</div>
+                <div class="feature-item">PROGRESS_TRACKING_SYSTEMS</div>
+                <div class="feature-item">TEAM_COLLABORATION_INTERFACE</div>
+                <div class="feature-item">PRODUCTIVITY_ANALYTICS_ENGINE</div>
+            </div>
+
+            <p>Initialize your workspace:</p>
+            
+            <a href="{{.LoginURL}}" class="cyber-button">
+                LAUNCH_SYSTEM
+            </a>
+
+            <div class="system-message">
+                <p><strong>SUPPORT_ACCESS:</strong> Technical assistance available via support protocols.</p>
+            </div>
         </div>
+
         <div class="footer">
-            <p>© {{.Year}} ActionHub. All rights reserved.</p>
-            <p>You received this email because you signed up for ActionHub.</p>
+            <p>© {{.Year}} ActionHub // All Systems Protected</p>
+            <p>Automated transmission: ActionHub Initialization Protocol</p>
+            <p style="font-size: 10px; margin-top: 20px; color: #454545;">
+                CHECKSUM: 0xF7E6D5C4B3A2
+            </p>
         </div>
     </div>
 </body>

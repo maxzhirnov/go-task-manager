@@ -1,5 +1,4 @@
 <script>
-    import { mdiFilter } from '@mdi/js';
     import FilterIcon from './FilterIcon.svelte';
 
     export let selectedStatus;
@@ -34,9 +33,7 @@
         
         <!-- Mobile select -->
         <div class="select-wrapper">
-            <svg viewBox="0 0 24 24" width="20" height="20" class="filter-icon">
-                <path fill="currentColor" d={mdiFilter} />
-            </svg>
+            <div class="icon"><FilterIcon/></div>
             <select bind:value={selectedStatus} class="filter-select">
                 {#each statusOptions as option}
                     <option value={option.value}>
@@ -49,6 +46,9 @@
 </div>
 
 <style>
+    .icon {
+        margin-right: .5rem;
+    }
     .filter-container {
         margin-bottom: 1rem;
         font-family: "JetBrains Mono", monospace;

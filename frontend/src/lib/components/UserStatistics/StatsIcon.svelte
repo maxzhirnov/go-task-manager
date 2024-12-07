@@ -1,4 +1,3 @@
-<!-- StatsIcon.svelte -->
 <script>
     export let type = 'total';
     export let size = '24';

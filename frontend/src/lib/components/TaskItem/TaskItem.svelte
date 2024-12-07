@@ -1,12 +1,14 @@
 <script>
-    import { api } from '../api.js';
-    import { tasks } from '../stores.js';
+    import { api } from '../../api.js';
+    import { tasks } from '../../stores.js';
     import { showError } from '$lib/stores.js';
     import { dragHandle } from 'svelte-dnd-action';
     import Time from "svelte-time";
     import FormattedTime from './FormattedTime.svelte';
+    
     import TechButton from './TechButton.svelte';
     import DragHandle from './DragHandle.svelte';
+    import StatusSelector from './StatusSelector.svelte';
 
     export let task;
 
@@ -14,6 +16,7 @@
     let editTitle = task.title;
     let editDescription = task.description;
     let editStatus = task.status;
+    let statusSelector; 
 
     async function handleStatusChange(newStatus) {
         try {
@@ -42,7 +45,8 @@
         }
 
         try {
-            await api.updateTask(task.id, editTitle, editDescription, editStatus);
+            const newStatus = statusSelector.getCurrentValue();
+            await api.updateTask(task.id, editTitle, editDescription, newStatus);
             const updatedTasks = await api.fetchTasks();
             tasks.set(updatedTasks);
             isEditing = false;
@@ -75,11 +79,13 @@
                     placeholder="Task Description" 
                     required
                 ></textarea>
-                <select bind:value={editStatus}>
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                </select>
+                <StatusSelector 
+                    bind:this={statusSelector}
+                    value={editStatus}
+                    onChange={(newStatus) => editStatus = newStatus}
+                    immediate={false}
+                    fullWidth={true}
+                />
                 <div class="edit-actions-in-edit">
                     <button class="tech-button save" on:click={handleEdit}>
                         <span class="button-content">
@@ -131,14 +137,13 @@
                     />
                 </div>
                 <div class="edit-status">
-                    <select 
-                        value={task.status} 
-                        on:change={(e) => handleStatusChange(e.target.value)}
-                    >
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                    </select>
+                    <div class="edit-status">
+                        <StatusSelector 
+                            value={task.status} 
+                            onChange={handleStatusChange}
+                            immediate={true}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

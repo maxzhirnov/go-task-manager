@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import { api } from '$lib/api';
     import { showError } from '$lib/stores';
-    import LoadingSpinner from './LoadingSpinner.svelte';
+    import LoadingSpinner from '../Common/LoadingSpinner.svelte';
     import StatsIcon from './StatsIcon.svelte';
     
     export let statistics = null;

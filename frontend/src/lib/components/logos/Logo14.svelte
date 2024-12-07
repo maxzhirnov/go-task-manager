@@ -1,4 +1,3 @@
-<!-- src/lib/components/Logo.svelte -->
 <script>
     import { goto } from '$app/navigation';
     

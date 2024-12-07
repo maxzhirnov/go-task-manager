@@ -10,8 +10,8 @@
     import { api } from '$lib/api.js';
     import { showError } from '$lib/stores.js';
 
-    import LoadingSpinner from './LoadingSpinner.svelte';
-    import TaskItem from './TaskItem.svelte';
+    import LoadingSpinner from '../Common/LoadingSpinner.svelte';
+    import TaskItem from '../TaskItem/TaskItem.svelte';
     import FilterButtons from './FilterButtons.svelte';
 
     let isLoading = true; //

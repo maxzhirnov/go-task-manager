@@ -1,5 +1,5 @@
 <script>
-    import { errorMessage } from '../stores.js';
+    import { errorMessage } from '$lib/stores.js';
 </script>
 
 {#if $errorMessage}

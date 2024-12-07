@@ -1,0 +1,30 @@
+:root {
+    --background-primary: #0f1215;
+    --background-secondary: #161b22;
+    --text-primary: #ffffff;
+    --max-width: 800px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    color: var(--text-primary);
+    background-color: var(--background-primary);
+    background-image: radial-gradient(
+        circle at 50% 50%,
+        var(--background-secondary) 1px,
+        transparent 1px
+    );
+    background-size: 24px 24px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 20px;
+}

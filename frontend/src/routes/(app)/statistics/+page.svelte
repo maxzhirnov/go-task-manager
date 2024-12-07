@@ -1,8 +1,9 @@
 <script>
     import { onMount } from 'svelte';
-    import UserStatistics from '$lib/components/UserStatistics.svelte';
     import { goto } from '$app/navigation';
-    import Header from '$lib/components/Header.svelte';
+
+    import UserStatistics from '$lib/components/UserStatistics/UserStatistics.svelte';
+
 
     let statistics = null;
     let title = "Statistics"

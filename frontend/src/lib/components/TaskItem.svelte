@@ -131,7 +131,7 @@
         {/if}
 </li>
 
-<style>
+<!-- <style>
     .task-item {
         background-color: #f5f5f5;
         margin: 10px 0;
@@ -381,5 +381,198 @@
         .edit-actions button {
             width: 100%;
         }
+    }
+</style> -->
+
+
+<style>
+    .task-item {
+        background: #1c1c1c;
+        border: 1px solid #0984e3;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(9, 132, 227, 0.1);
+        font-family: "JetBrains Mono", monospace;
+    }
+
+    /* Circuit board pattern background */
+    .task-item::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            radial-gradient(
+                circle at 50% 50%,
+                rgba(0, 184, 148, 0.05) 1px,
+                transparent 1px
+            );
+        background-size: 10px 10px;
+        pointer-events: none;
+    }
+
+    /* Status indicators */
+    .task-item.pending::after {
+        content: "STATUS::PENDING";
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.6rem;
+        color: #ffd32a;
+        opacity: 0.8;
+    }
+
+    .task-item.in_progress::after {
+        content: "STATUS::RUNNING";
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.6rem;
+        color: #0984e3;
+        opacity: 0.8;
+    }
+
+    .task-item.completed::after {
+        content: "STATUS::COMPLETE";
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.6rem;
+        color: #00b894;
+        opacity: 0.8;
+    }
+
+    .task-content-container {
+        position: relative;
+        z-index: 1;
+    }
+
+    .task-content {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .drag-handle {
+        color: #00b894;
+        cursor: move;
+        font-size: 1.2rem;
+        opacity: 0.8;
+        transition: opacity 0.3s ease;
+    }
+
+    .drag-handle:hover {
+        opacity: 1;
+    }
+
+    .task-text h3 {
+        color: #fff;
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+    }
+
+    .task-text p {
+        color: #b2bec3;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .task-text-footer {
+        margin-top: 0.5rem;
+        font-size: 0.7rem;
+        color: #636e72;
+    }
+
+    .task-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(9, 132, 227, 0.2);
+    }
+
+    button {
+        background: transparent;
+        border: 1px solid #00b894;
+        color: #00b894;
+        padding: 0.4rem;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    button:hover {
+        background: rgba(0, 184, 148, 0.1);
+        box-shadow: 0 0 8px rgba(0, 184, 148, 0.3);
+    }
+
+    select {
+        background: #2d3436;
+        border: 1px solid #0984e3;
+        color: #0984e3;
+        padding: 0.3rem;
+        border-radius: 3px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+    }
+
+    /* Edit mode styles */
+    .task-edit {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    .task-edit input,
+    .task-edit textarea {
+        background: #2d3436;
+        border: 1px solid #0984e3;
+        color: #fff;
+        padding: 0.5rem;
+        border-radius: 3px;
+        font-family: "JetBrains Mono", monospace;
+    }
+
+    .character-count {
+        color: #636e72;
+        font-size: 0.7rem;
+        text-align: right;
+    }
+
+    /* Hover effects */
+    .task-item:hover {
+        border-color: #00b894;
+        box-shadow: 0 0 15px rgba(0, 184, 148, 0.1);
+    }
+
+    .task-item:hover::before {
+        animation: circuitPulse 2s infinite;
+    }
+
+    @keyframes circuitPulse {
+        0%, 100% {
+            opacity: 0.05;
+        }
+        50% {
+            opacity: 0.1;
+        }
+    }
+
+    /* Status-specific glows */
+    .task-item.pending {
+        border-left: 3px solid #ffd32a;
+    }
+
+    .task-item.in_progress {
+        border-left: 3px solid #0984e3;
+    }
+
+    .task-item.completed {
+        border-left: 3px solid #00b894;
     }
 </style>

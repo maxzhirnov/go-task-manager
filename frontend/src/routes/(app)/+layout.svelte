@@ -26,11 +26,26 @@
 <Notification />
 
 <style>
-    :global(body) {
+    /* :global(body) {
         font-family: Helvetica, Arial, sans-serif;
         box-sizing: border-box;
         max-width: 800px;
         margin: 0 auto;
         padding: 20px;
+    } */
+
+    :global(body) {
+        color: white;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #0f1215;
+        background-image: 
+            radial-gradient(
+                circle at 50% 50%,
+                #161b22 1px,
+                transparent 1px
+            );
+        background-size: 24px 24px;
     }
   </style>

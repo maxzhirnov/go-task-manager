@@ -185,7 +185,7 @@
     }
 </script>
 
-<div class="container">
+<!-- <div class="container">
     <div class="profile-header">
         <h1>My Profile</h1>
         <div class="email">{$user?.email}</div>
@@ -375,6 +375,283 @@
     @media (max-width: 640px) {
         .container {
             padding: 1rem;
+        }
+    }
+</style> -->
+
+<div class="container">
+    <div class="terminal-box profile-header">
+        <div class="terminal-header">
+            <span class="terminal-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </span>
+            <span class="terminal-title">USER_PROFILE.sys</span>
+        </div>
+        <div class="profile-content">
+            <div class="user-id">ID: {$user?.email}</div>
+            <div class="status-line">STATUS: AUTHENTICATED</div>
+        </div>
+    </div>
+
+    {#if loading}
+        <div class="loading">
+            <LoadingSpinner />
+        </div>
+    {:else}
+        <div class="terminal-box">
+            <div class="terminal-header">
+                <span class="terminal-dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </span>
+                <span class="terminal-title">USERNAME_CONFIG.exe</span>
+            </div>
+            <div class="terminal-content">
+                <div class="form-group">
+                    <div class="input-label">[USERNAME]</div>
+                    <div class="input-wrapper">
+                        <span class="prompt">>_</span>
+                        <input 
+                            type="text" 
+                            bind:value={formData.username} 
+                            placeholder="New username"
+                            class:error={formErrors.username}
+                        />
+                    </div>
+                    {#if formErrors.username}
+                        <span class="error-message">[ERROR] {formErrors.username}</span>
+                    {/if}
+                </div>
+                
+                <div class="form-group">
+                    <div class="input-label">[VERIFY]</div>
+                    <div class="input-wrapper">
+                        <span class="prompt">>_</span>
+                        <input 
+                            type="password" 
+                            bind:value={formData.currentPassword} 
+                            placeholder="Current password"
+                            class:error={formErrors.currentPassword}
+                        />
+                    </div>
+                    {#if formErrors.currentPassword}
+                        <span class="error-message">[ERROR] {formErrors.currentPassword}</span>
+                    {/if}
+                </div>
+                
+                <button class="terminal-button" on:click={updateUsername}>
+                    <span class="btn-icon">⚡</span>
+                    <span class="btn-text">UPDATE_USERNAME</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="terminal-box">
+            <div class="terminal-header">
+                <span class="terminal-dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </span>
+                <span class="terminal-title">PASSWORD_CONFIG.exe</span>
+            </div>
+            <div class="terminal-content">
+                <div class="form-group">
+                    <div class="input-label">[VERIFY_EMAIL]</div>
+                    <div class="input-wrapper">
+                        <span class="prompt">>_</span>
+                        <input 
+                            type="email"
+                            bind:value={formData.email} 
+                            placeholder="Confirm email"
+                            class:error={formErrors.email}
+                        />
+                    </div>
+                    {#if formErrors.email}
+                        <span class="error-message">[ERROR] {formErrors.email}</span>
+                    {/if}
+                </div>
+  
+                <button class="terminal-button" on:click={() => updatePasswordThroughEmail(formData.email)}>
+                    <span class="btn-icon">🔒</span>
+                    <span class="btn-text">INITIATE_PASSWORD_RESET</span>
+                </button>
+            </div>
+        </div>
+
+        <Logo12 clickable={false} />
+    {/if}
+</div>
+
+<style>
+    .container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        font-family: "JetBrains Mono", monospace;
+    }
+
+    .terminal-box {
+        background: #1c1c1c;
+        border: 1px solid #0984e3;
+        border-radius: 4px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .terminal-box::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            radial-gradient(
+                circle at 50% 50%,
+                rgba(0, 184, 148, 0.05) 1px,
+                transparent 1px
+            );
+        background-size: 10px 10px;
+        pointer-events: none;
+    }
+
+    .terminal-header {
+        background: #2d3436;
+        padding: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 1px solid rgba(9, 132, 227, 0.2);
+    }
+
+    .terminal-dots {
+        display: flex;
+        gap: 4px;
+    }
+
+    .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #636e72;
+    }
+
+    .terminal-title {
+        color: #00b894;
+        font-size: 0.7rem;
+        letter-spacing: 0.1em;
+    }
+
+    .terminal-content {
+        padding: 1rem;
+    }
+
+    .profile-content {
+        padding: 1rem;
+        color: #00b894;
+    }
+
+    .user-id {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .status-line {
+        font-size: 0.8rem;
+        color: #0984e3;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .input-label {
+        color: #00b894;
+        font-size: 0.7rem;
+        margin-bottom: 0.5rem;
+        letter-spacing: 0.1em;
+    }
+
+    .input-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #2d3436;
+        border: 1px solid #0984e3;
+        border-radius: 3px;
+        padding: 0 0.5rem;
+    }
+
+    .prompt {
+        color: #00b894;
+        font-size: 0.9rem;
+    }
+
+    input {
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: #fff;
+        padding: 0.8rem 0.5rem;
+        font-family: inherit;
+        font-size: 0.9rem;
+    }
+
+    input:focus {
+        outline: none;
+    }
+
+    .input-wrapper:focus-within {
+        border-color: #00b894;
+        box-shadow: 0 0 8px rgba(0, 184, 148, 0.2);
+    }
+
+    .error-message {
+        color: #ff6b6b;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+    }
+
+    .terminal-button {
+        background: transparent;
+        border: 1px solid #00b894;
+        color: #00b894;
+        padding: 0.8rem 1rem;
+        border-radius: 3px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: inherit;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .terminal-button:hover {
+        background: rgba(0, 184, 148, 0.1);
+        box-shadow: 0 0 8px rgba(0, 184, 148, 0.3);
+    }
+
+    .loading {
+        display: flex;
+        justify-content: center;
+        padding: 2rem;
+    }
+
+    @media (max-width: 600px) {
+        .container {
+            margin: 1rem auto;
+        }
+
+        .terminal-content {
+            padding: 0.8rem;
         }
     }
 </style>

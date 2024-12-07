@@ -85,4 +85,10 @@
             display: none;
         }
     }
+
+    @media screen and (max-width: 400px) {
+        .tech-button {
+            padding: 0.2rem;
+        }
+    }
 </style>

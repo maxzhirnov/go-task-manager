@@ -1,7 +1,7 @@
 <!-- TechIcon.svelte -->
 <script>
-    export let type = 'edit'; // edit, delete, complete
-    export let size = '24';
+    export let type = 'edit'; 
+    export let size = '20';
     
     const icons = {
         edit: "M4 20h16m-2-12l2-2-2-2-2 2 2 2zm0 0l-8 8-4 1 1-4 8-8",

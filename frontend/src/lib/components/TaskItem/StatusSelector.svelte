@@ -242,4 +242,10 @@
         --x: var(--mouse-x, 50%);
         --y: var(--mouse-y, 50%);
     }
+
+    @media screen and (max-width: 400px) {
+        .selector-container select {
+            font-size: 0.5rem;
+        }
+    }
 </style>

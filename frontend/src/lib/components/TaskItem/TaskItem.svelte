@@ -608,7 +608,7 @@
         }
 
         .task-text-content p {
-            font-size: 0.6rem;
+            font-size: 0.6  rem;
         }
     }
 </style>

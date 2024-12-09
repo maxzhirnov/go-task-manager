@@ -28,10 +28,10 @@ func newTestAuthHandler(t *testing.T) (*AuthHandler, sqlmock.Sqlmock, func()) {
 	handler := &AuthHandler{
 		DB:           db,
 		EmailService: mockEmail,
-		GenerateJWT: func(userID int, username string) (string, error) {
+		GenerateJWT: func(userID int, username string, email string) (string, error) {
 			return "mock-access-token", nil
 		},
-		GenerateRefreshToken: func(userID int, username string) (string, error) {
+		GenerateRefreshToken: func(userID int, username string, email string) (string, error) {
 			return "mock-refresh-token", nil
 		},
 	}

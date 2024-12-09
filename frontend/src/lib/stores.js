@@ -44,6 +44,7 @@ export function initializeUser() {
         user.set({
             id: userData.user_id,
             username: userData.username,
+            email: userData.email
         });
     }
 }

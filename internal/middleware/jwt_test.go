@@ -15,19 +15,21 @@ func TestGenerateJWT(t *testing.T) {
 		name     string
 		userID   int
 		username string
+		email    string
 		wantErr  bool
 	}{
 		{
 			name:     "Valid token generation",
 			userID:   1,
 			username: "testuser",
+			email:    "test@example.com",
 			wantErr:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, err := GenerateJWT(tt.userID, tt.username)
+			token, err := GenerateJWT(tt.userID, tt.username, tt.email)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Empty(t, token)
@@ -50,19 +52,21 @@ func TestGenerateAndValidateRefreshToken(t *testing.T) {
 		name     string
 		userID   int
 		username string
+		email    string
 		wantErr  bool
 	}{
 		{
 			name:     "Valid refresh token generation",
 			userID:   1,
 			username: "testuser",
+			email:    "test@example.com",
 			wantErr:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			token, err := GenerateRefreshToken(tt.userID, tt.username)
+			token, err := GenerateRefreshToken(tt.userID, tt.username, tt.email)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Empty(t, token)
@@ -89,7 +93,7 @@ func TestJWTAuthMiddleware(t *testing.T) {
 		{
 			name: "Valid token",
 			setupAuth: func(r *http.Request) {
-				token, _ := GenerateJWT(1, "testuser")
+				token, _ := GenerateJWT(1, "testuser", "test@example.com")
 				r.Header.Set("Authorization", "Bearer "+token)
 			},
 			expectedStatus: http.StatusOK,

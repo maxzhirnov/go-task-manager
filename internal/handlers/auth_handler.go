@@ -27,10 +27,10 @@ type AuthHandler struct {
 	EmailService email.EmailSender
 
 	// GenerateJWT creates new JWT access tokens
-	GenerateJWT func(userID int, username string) (string, error)
+	GenerateJWT func(userID int, username string, email string) (string, error)
 
 	// GenerateRefreshToken creates new refresh tokens
-	GenerateRefreshToken func(userID int, username string) (string, error)
+	GenerateRefreshToken func(userID int, username string, email string) (string, error)
 
 	// ValidateRefreshToken verifies and parses refresh tokens
 	ValidateRefreshToken func(token string) (*middleware.Claims, error)
@@ -239,7 +239,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate access token
-	accessToken, err := h.GenerateJWT(user.ID, user.Username)
+	accessToken, err := h.GenerateJWT(user.ID, user.Username, user.Email)
 	if err != nil {
 		log.Printf("Failed to generate access token: %v", err)
 		JSONError(w, "Failed to generate access token", http.StatusInternalServerError)
@@ -247,7 +247,7 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate refresh token
-	refreshToken, err := h.GenerateRefreshToken(user.ID, user.Username)
+	refreshToken, err := h.GenerateRefreshToken(user.ID, user.Username, user.Email)
 	if err != nil {
 		log.Printf("Failed to generate refresh token: %v", err)
 		JSONError(w, "Failed to generate refresh token", http.StatusInternalServerError)
@@ -323,7 +323,7 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Generate new access token using latest user data
-	accessToken, err := h.GenerateJWT(user.ID, user.Username)
+	accessToken, err := h.GenerateJWT(user.ID, user.Username, user.Email)
 	if err != nil {
 		log.Printf("Failed to generate new access token: %v", err)
 		JSONError(w, "Failed to generate access token", http.StatusInternalServerError)

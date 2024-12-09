@@ -43,11 +43,17 @@
                 <div class="cta-buttons" class:animate-fade-in={isVisible}>
                     <a href="/register" class="cyber-button">
                         <span class="btn-icon">⚡</span>
-                        <span class="btn-text">INITIALIZE_SESSION</span>
+                        <span class="btn-text">
+                            <span class="desktop-text">INITIALIZE_SESSION</span>
+                            <span class="mobile-text">INIT</span>
+                        </span>
                     </a>
                     <a href="/login" class="cyber-button secondary">
                         <span class="btn-icon">🔒</span>
-                        <span class="btn-text">ACCESS_PORTAL</span>
+                        <span class="btn-text">
+                            <span class="desktop-text">ACCESS_PORTAL</span>
+                            <span class="mobile-text">LOGIN</span>
+                        </span>
                     </a>
                 </div>
             </div>
@@ -264,7 +270,7 @@
         }
     
         .hero {
-            min-height: 100vh;
+            min-height: 80vh;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -569,6 +575,12 @@
             color: #0984e3;
         }
 
+        .cta-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
         .cta-content {
             padding: 2rem;
         }
@@ -601,32 +613,6 @@
             100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .hero {
-                padding: 1rem;
-            }
-
-            .glitch {
-                font-size: 2.5rem;
-            }
-
-            .features-grid,
-            .testimonials-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .terminal-content {
-                padding: 1rem;
-            }
-
-            .cyber-button {
-                width: 80%;
-                margin-bottom: .5rem;
-                justify-content: center;
-            }
-        }
-
         /* Animation Classes */
         .animate-slide-up {
             animation: slideUp 0.8s ease forwards;
@@ -656,5 +642,44 @@
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 1rem;
+            }
+
+            .glitch {
+                font-size: 2.5rem;
+            }
+
+            .features-grid,
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .terminal-content {
+                padding: 1rem;
+            }
+
+            .cyber-button {
+                width: 80%;
+                margin-bottom: .5rem;
+                justify-content: center;
+            }
+            
+            .cyber-button {
+                width: 100%;
+                max-width: none;
+            }
+
+            .desktop-text {
+                display: none;
+            }
+
+            .mobile-text {
+                display: inline;
+            }
         }
     </style>

@@ -184,6 +184,18 @@
             loading = false;
         }
     }
+
+    function generateHexId() {
+        return Math.random().toString(16).slice(2, 10).toUpperCase();
+    }
+
+    function formatUptime() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    }
 </script>
 
 <div class="container">
@@ -199,6 +211,12 @@
         <div class="profile-content">
             <div class="user-id">ID: {$user?.email}</div>
             <div class="status-line">STATUS: AUTHENTICATED</div>
+            <div class="access-level">ACCESS_LEVEL: USER::0x01</div>
+            <div class="session-id">SESSION: {generateHexId()}</div>
+            <div class="uptime">UPTIME: {formatUptime()}</div>
+            <div class="connection">CONNECTION: SECURE::SHA256</div>
+            <div class="system-time">SYS_TIME: {new Date().toISOString()}</div>
+            <div class="node-status">NODE: ACTIVE::0x{Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase()}</div>
         </div>
     </div>
 
@@ -361,16 +379,33 @@
     .profile-content {
         padding: 1rem;
         color: #00b894;
+        gap: 0.3rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
     }
+
+    .profile-content > div {
+        opacity: 0.8;
+        transition: opacity 0.3s ease;
+    }
+
+    .profile-content > div:hover {
+        opacity: 1;
+    }
+
 
     .user-id {
-        font-size: 0.9rem;
         margin-bottom: 0.5rem;
+        color: #0984e3;
     }
 
-    .status-line {
-        font-size: 0.8rem;
-        color: #0984e3;
+    .node-status::after {
+        content: "▊";
+        animation: blink 1s steps(1) infinite;
+    }
+
+    @keyframes blink {
+        50% { opacity: 0; }
     }
 
     .form-group {

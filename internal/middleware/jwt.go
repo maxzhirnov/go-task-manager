@@ -56,6 +56,7 @@ func getEnvWithDefault(key, defaultValue string) string {
 type Claims struct {
 	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
+	Email    string `json:"email"`
 	jwt.StandardClaims
 }
 
@@ -97,7 +98,7 @@ type Claims struct {
 //   - The token is signed with jwtSecret
 //   - Expires in 1 hour from creation
 //   - Contains user identification but no sensitive data
-func GenerateJWT(userID int, username string) (string, error) {
+func GenerateJWT(userID int, username string, email string) (string, error) {
 	// Set token expiration time to 1 hour from now
 	expirationTime := time.Now().Add(1 * time.Hour)
 
@@ -105,6 +106,7 @@ func GenerateJWT(userID int, username string) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
+		Email:    email,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -137,7 +139,7 @@ func GenerateJWT(userID int, username string) (string, error) {
 //	if err != nil {
 //	    return "", fmt.Errorf("failed to generate refresh token: %w", err)
 //	}
-func GenerateRefreshToken(userID int, username string) (string, error) {
+func GenerateRefreshToken(userID int, username string, email string) (string, error) {
 	// Set expiration time to 7 days from now
 	expirationTime := time.Now().Add(7 * 24 * time.Hour)
 
@@ -145,6 +147,7 @@ func GenerateRefreshToken(userID int, username string) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
+		Email:    email,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},

@@ -28,6 +28,7 @@ type Config struct {
 		Host     string // SMTP server hostname
 		Port     int    // SMTP server port
 		Username string // SMTP authentication username
+		From     string // Sender email address
 		Password string // SMTP authentication password
 		FromName string // Sender name for emails
 		BaseURL  string // Base URL for email links
@@ -97,6 +98,7 @@ func LoadConfig() (*Config, error) {
 	config.SMTP.Host = getEnv("SMTP_HOST", "smtp.gmail.com")
 	config.SMTP.Port = getEnvAsInt("SMTP_PORT", 587)
 	config.SMTP.Username = getEnv("SMTP_USERNAME", "")
+	config.SMTP.From = getEnv("SMTP_FROM", "")
 	config.SMTP.Password = getEnv("SMTP_PASSWORD", "")
 	config.SMTP.FromName = getEnv("SMTP_FROM_NAME", "Task Manager")
 	config.SMTP.BaseURL = getEnv("SMTP_BASE_URL", "http://localhost:8080")

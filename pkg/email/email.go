@@ -5,6 +5,7 @@ package email
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"gopkg.in/mail.v2"
@@ -44,7 +45,7 @@ type EmailService struct {
 // Returns:
 //   - *EmailService: Configured email service
 //   - error: Any error during template initialization
-func NewEmailService(host string, port int, username, password, baseURL string) (*EmailService, error) {
+func NewEmailService(host string, port int, username, from, password, baseURL string) (*EmailService, error) {
 	templates, err := NewEmailTemplate()
 	if err != nil {
 		return nil, err
@@ -52,7 +53,7 @@ func NewEmailService(host string, port int, username, password, baseURL string) 
 
 	return &EmailService{
 		dialer:    mail.NewDialer(host, port, username, password),
-		from:      username,
+		from:      from,
 		templates: templates,
 		baseURL:   baseURL,
 	}, nil
@@ -157,16 +158,22 @@ type PasswordResetEmailData struct {
 }
 
 func (s *EmailService) SendPasswordResetEmail(to, resetLink string) error {
-	log.Printf("Sending password reset email to: %s", to)
+	maskedTo := maskEmail(to)
+	log.Printf("Sending password reset email to: %s", maskedTo)
 
 	// Create email message
 	m := mail.NewMessage()
 	m.SetHeader("From", s.from)
+	log.Printf("Setting header From: %s", s.from)
+
 	m.SetHeader("To", to)
+	log.Printf("Setting header To: %s", maskedTo)
+
 	m.SetHeader("Subject", "Reset Your Password - ActionHub")
+	log.Printf("Setting header Subject: Reset Your Password - ActionHub")
 
 	// Get IP address from request context (you might need to pass this through)
-	ipAddress := "Unknown" // In production, get this from the request
+	ipAddress := "Unknown"
 
 	// Prepare template data
 	data := PasswordResetEmailData{
@@ -182,15 +189,29 @@ func (s *EmailService) SendPasswordResetEmail(to, resetLink string) error {
 		log.Printf("Failed to execute password reset email template: %v", err)
 		return fmt.Errorf("failed to execute email template: %v", err)
 	}
+	log.Printf("Executed password reset email template")
 
 	m.SetBody("text/html", body)
+	// log.Printf("Set body text/html: %s", body)
 
 	// Send email
 	if err := s.dialer.DialAndSend(m); err != nil {
 		log.Printf("Failed to send password reset email: %v", err)
 		return fmt.Errorf("failed to send email: %v", err)
 	}
-
-	log.Printf("Successfully sent password reset email to: %s", to)
+	log.Printf("Successfully sent password reset email to: %s", maskedTo)
 	return nil
+}
+
+// maskEmail masks part of the email for logging purposes
+// Example: j***@example.com
+func maskEmail(email string) string {
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return "invalid_email"
+	}
+	if len(parts[0]) <= 1 {
+		return email
+	}
+	return parts[0][:1] + "***@" + parts[1]
 }

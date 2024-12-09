@@ -24,6 +24,7 @@ func setupRouter(cfg *config.Config) *mux.Router {
 		cfg.SMTP.Host,
 		cfg.SMTP.Port,
 		cfg.SMTP.Username,
+		cfg.SMTP.From,
 		cfg.SMTP.Password,
 		cfg.SMTP.BaseURL,
 	)

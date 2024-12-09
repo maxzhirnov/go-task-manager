@@ -16,13 +16,86 @@
             {$user.username}
         </a>
         <button class="logout-btn" on:click={logout}>
-            <span class="btn-icon">⏻</span>
+            <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16">
+                <!-- Outer circle -->
+                <circle 
+                    cx="12" 
+                    cy="12" 
+                    r="10" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    stroke-width="1"
+                    opacity="0.5"
+                    class="outer-circle"
+                />
+                <!-- Power circle -->
+                <circle 
+                    cx="12" 
+                    cy="12" 
+                    r="6" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    stroke-width="1.5"
+                    class="power-circle"
+                />
+                <!-- Power line -->
+                <path 
+                    d="M12 8v4" 
+                    stroke="currentColor" 
+                    stroke-width="1.5" 
+                    stroke-linecap="round"
+                    class="power-line"
+                />
+            </svg>
             <span class="btn-text">LOGOUT</span>
         </button>
     </div>
 {/if}
 
 <style>
+     .logout-btn {
+        background: transparent;
+        border: 1px solid #ff6b6b;
+        color: #ff6b6b;
+        padding: 0.4rem 0.8rem;
+        border-radius: 3px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+    }
+
+    .logout-btn:hover {
+        background: rgba(255, 107, 107, 0.1);
+        box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
+    }
+
+    .btn-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .outer-circle, .power-circle, .power-line {
+        transition: all 0.3s ease;
+    }
+
+    .logout-btn:hover .btn-icon {
+        transform: rotate(180deg);
+    }
+
+    .logout-btn:hover .power-circle {
+        stroke-width: 2;
+    }
+
+    .logout-btn:hover .power-line {
+        stroke-width: 2;
+    }
+
+    .logout-btn:hover .outer-circle {
+        opacity: 0.8;
+    }
     .user-terminal {
         display: flex;
         align-items: center;
@@ -46,26 +119,6 @@
         text-shadow: 0 0 8px rgba(0, 184, 148, 0.3);
     }
 
-    .logout-btn {
-        background: transparent;
-        border: 1px solid #ff6b6b;
-        color: #ff6b6b;
-        padding: 0.4rem 0.8rem;
-        border-radius: 3px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.8rem;
-        transition: all 0.3s ease;
-    }
-
-    .logout-btn:hover {
-        background: rgba(255, 107, 107, 0.1);
-        box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
-    }
-
     .user-terminal {
         display: flex;
         align-items: center;
@@ -89,25 +142,6 @@
         text-shadow: 0 0 8px rgba(0, 184, 148, 0.3);
     }
 
-    .logout-btn {
-        background: transparent;
-        border: 1px solid #ff6b6b;
-        color: #ff6b6b;
-        padding: 0.4rem 0.8rem;
-        border-radius: 3px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-family: "JetBrains Mono", monospace;
-        font-size: 0.8rem;
-        transition: all 0.3s ease;
-    }
-
-    .logout-btn:hover {
-        background: rgba(255, 107, 107, 0.1);
-        box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
-    }
 
     @media screen and (max-width: 768px) {
         .user-terminal {

@@ -45,7 +45,7 @@ type EmailService struct {
 // Returns:
 //   - *EmailService: Configured email service
 //   - error: Any error during template initialization
-func NewEmailService(host string, port int, username, from, password, baseURL string) (*EmailService, error) {
+func NewEmailService(host string, port int, username, from, fromName, password, baseURL string) (*EmailService, error) {
 	templates, err := NewEmailTemplate()
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func NewEmailService(host string, port int, username, from, password, baseURL st
 
 	return &EmailService{
 		dialer:    mail.NewDialer(host, port, username, password),
-		from:      from,
+		from:      fmt.Sprintf("%s <%s>", fromName, from),
 		templates: templates,
 		baseURL:   baseURL,
 	}, nil

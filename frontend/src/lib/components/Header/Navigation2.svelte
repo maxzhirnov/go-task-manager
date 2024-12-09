@@ -55,15 +55,15 @@
     .cyber-nav {
         position: relative;
         background: #1c1c1c;
-        border: 1px solid #0984e3;
+        /* border: 1px solid #0984e3; */
         border-radius: 4px;
-        padding: 1rem;
+        padding: .1rem;
         overflow: hidden;
     }
 
     .nav-grid {
         display: flex;
-        gap: 2rem;
+        /* gap: 2rem; */
         position: relative;
         z-index: 2;
     }

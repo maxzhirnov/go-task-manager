@@ -92,7 +92,6 @@
 
     .status-selector {
         position: relative;
-        /* width: fit-content; */
     }
 
     .selector-container {
@@ -132,12 +131,12 @@
     /* Decoration elements */
     .selector-decoration {
         position: absolute;
-        right: 0.8rem;
+        right: 0.5rem;
         top: 50%;
         transform: translateY(-50%);
         display: flex;
         align-items: center;
-        gap: 0.3rem;
+        gap: 0.2rem;
         pointer-events: none;
         z-index: 3;
     }
@@ -147,7 +146,7 @@
         height: 6px;
         border-radius: 50%;
         background: currentColor;
-        animation: pulse 2s infinite;
+        animation: pulse 1s infinite;
     }
 
     .selector-arrow {
@@ -206,8 +205,8 @@
             opacity: 0.8;
         }
         50% {
-            transform: scale(1.2);
-            opacity: 0.4;
+            transform: scale(1);
+            opacity: 0.2;
         }
     }
 

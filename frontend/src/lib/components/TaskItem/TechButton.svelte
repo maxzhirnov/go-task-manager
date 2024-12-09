@@ -79,6 +79,30 @@
         cursor: not-allowed;
     }
 
+    .tech-button:hover::after {
+        opacity: 0.1;
+    }
+
+    /* Active state */
+    .tech-button:active {
+        transform: scale(0.98);
+    }
+
+    /* Scanline effect */
+    .tech-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: currentColor;
+        opacity: 0.3;
+        transform: translateY(-100%);
+        animation: scan 2s linear infinite;
+    }
+
+
     /* Reduced motion */
     @media (prefers-reduced-motion: reduce) {
         .button-glow {

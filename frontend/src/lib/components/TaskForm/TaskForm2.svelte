@@ -3,6 +3,8 @@
     import { api } from '$lib/api.js';
     import { tasks } from '$lib/stores.js';
     import { mdiPlus, mdiChevronDown } from '@mdi/js';
+    import { Analytics } from '$lib/analytics';
+
 
     let title = '';
     let description = '';
@@ -11,6 +13,12 @@
     let isSubmitting = false;
 
     async function handleQuickSubmit() {
+
+        Analytics.track('Quick Add', {
+            location: 'tasks',
+            buttonType: 'quick-add',
+        });
+
         if (!title.trim() || isSubmitting) return;
         
         if (title.length > 100) {

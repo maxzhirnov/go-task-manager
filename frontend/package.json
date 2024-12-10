@@ -18,6 +18,7 @@
 	},
 	"dependencies": {
 		"@mdi/js": "^7.4.47",
+		"mixpanel-browser": "^2.56.0",
 		"svelte-dnd-action": "^0.9.52"
 	}
 }

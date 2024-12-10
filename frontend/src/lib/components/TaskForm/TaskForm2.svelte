@@ -14,10 +14,7 @@
 
     async function handleQuickSubmit() {
 
-        Analytics.track('Quick Add', {
-            location: 'tasks',
-            buttonType: 'quick-add',
-        });
+        Analytics.track('Quick Task Add');
 
         if (!title.trim() || isSubmitting) return;
         
@@ -38,6 +35,9 @@
     }
 
     async function handleFullSubmit() {
+
+        Analytics.track('Full Task Add');
+
         if (isSubmitting) return;
 
         if (title.length > 100) {

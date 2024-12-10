@@ -1,11 +1,16 @@
 <script>
     export let user;
     import { goto } from '$app/navigation';
+    import { Analytics } from '$lib/analytics';
 
     function logout() {
+        console.log("logout");
+        Analytics.track('User Logged Out');
+        Analytics.clearUser();
+
         localStorage.removeItem("jwt");
         localStorage.removeItem("refresh_token");
-        window.location.href = "/login";
+        goto('/login');
     }
 </script>
 

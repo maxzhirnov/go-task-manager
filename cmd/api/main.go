@@ -10,7 +10,6 @@ import (
 	"github.com/maxzhirnov/go-task-manager/pkg/config"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
 	"github.com/maxzhirnov/go-task-manager/pkg/email"
-	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func setupRouter(cfg *config.Config) *mux.Router {
@@ -60,15 +59,14 @@ func setupRouter(cfg *config.Config) *mux.Router {
 	api.HandleFunc("/users/statistics", taskHandler.GetUserStatistics).Methods("GET")
 	api.HandleFunc("/profile", userHandler.UpdateProfile).Methods("PUT")
 
-	// Swagger documentation
-	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"),
-		httpSwagger.DeepLinking(true),
-	))
-
 	// Static files for Svelte assets (CSS, JS)
 	r.PathPrefix("/_app/").Handler(http.FileServer(http.Dir("./frontend/build")))
 	r.PathPrefix("/assets/").Handler(http.FileServer(http.Dir("./frontend/build")))
+
+	r.HandleFunc("/favicon.svg", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		http.ServeFile(w, r, "./frontend/build/favicon.svg")
+	})
 
 	// SPA fallback - must be last
 	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

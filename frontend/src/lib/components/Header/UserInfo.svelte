@@ -4,7 +4,6 @@
     import { Analytics } from '$lib/analytics';
 
     function logout() {
-        console.log("logout");
         Analytics.track('User Logged Out');
         Analytics.clearUser();
 

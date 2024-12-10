@@ -29,7 +29,12 @@
             const { access_token, refresh_token } = await response.json();
             localStorage.setItem("jwt", access_token);
             localStorage.setItem("refresh_token", refresh_token);
-            window.location.href = "/";
+
+            Analytics.track('Login Successful', {
+                email: email
+            });
+            
+            goto('/tasks');
         } catch (error) {
             errorMessage = error.message;
         } finally {

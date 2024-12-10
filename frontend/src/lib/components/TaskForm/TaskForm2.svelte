@@ -14,14 +14,17 @@
 
     async function handleQuickSubmit() {
 
-        Analytics.track('Quick Task Add');
-
         if (!title.trim() || isSubmitting) return;
         
         if (title.length > 100) {
             showError("Task title cannot exceed 100 characters.");
             return;
         }
+
+        Analytics.track('Task Created', {
+            type: 'quick',
+            title: title
+        });
 
         isSubmitting = true;
         try {
@@ -36,14 +39,19 @@
 
     async function handleFullSubmit() {
 
-        Analytics.track('Full Task Add');
-
         if (isSubmitting) return;
 
         if (title.length > 100) {
             showError("Task title cannot exceed 100 characters.");
             return;
         }
+
+        Analytics.track('Task Created', {
+            type: 'full',
+            title: title,
+            description: description,
+            status: status
+        });
 
         isSubmitting = true;
         try {

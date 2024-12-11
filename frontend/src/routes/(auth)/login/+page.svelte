@@ -1,5 +1,6 @@
 <script>
     import { goto } from '$app/navigation';
+    import { Analytics } from '$lib/analytics';
     
     let email = '';
     let password = '';
@@ -33,7 +34,7 @@
             Analytics.track('Login Successful', {
                 email: email
             });
-            
+
             goto('/tasks');
         } catch (error) {
             errorMessage = error.message;

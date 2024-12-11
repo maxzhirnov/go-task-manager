@@ -18,9 +18,9 @@
     }
 
     // Track page views
-    $: if (typeof window !== 'undefined') {
-        Analytics.pageView($page.url.pathname);
-    }
+    // $: if (typeof window !== 'undefined') {
+    //     Analytics.pageView($page.url.pathname);
+    // }
 
     onMount(() => {
         Analytics.track('App Loaded');

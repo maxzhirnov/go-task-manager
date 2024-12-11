@@ -113,7 +113,7 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	deviceID := r.Header.Get("X-Device-ID")
+	deviceID := r.RemoteAddr
 
 	h.Analytics.Track(ctx, "Registration Attempted", deviceID, map[string]any{
 		"email":     req.Email,
@@ -237,7 +237,7 @@ type LoginRequest struct {
 //	}
 func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	deviceID := r.Header.Get("X-Device-ID")
+	deviceID := r.RemoteAddr
 
 	// Parse and validate request body
 	var req LoginRequest

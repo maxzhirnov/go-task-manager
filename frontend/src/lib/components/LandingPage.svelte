@@ -1,11 +1,38 @@
 <script>
     import { mdiCheckCircle, mdiClockOutline, mdiDragVertical, mdiChartBar, mdiStar } from '@mdi/js';
     import { onMount } from 'svelte';
+    import { Analytics } from '$lib/analytics';
 
     let isVisible = false;
+    let startTime = performance.now();
+    let hasScrolled = false;
+
+    function handleCTAClick(button_type) {
+        Analytics.track('CTA Clicked', {
+            button_type: button_type,
+            location: 'hero_section'
+        });
+    }
 
     onMount(() => {
         isVisible = true;
+
+        Analytics.track('Landing Page Loaded', {
+            load_time: performance.now() - startTime
+        });
+
+        // Track scroll depth
+        window.addEventListener('scroll', () => {
+            if (!hasScrolled) {
+                hasScrolled = true;
+                Analytics.track('Content Scroll Started');
+            }
+
+            const scrollDepth = getScrollDepth();
+            if (scrollDepth >= 50) {
+                Analytics.track('50% Scroll Depth Reached');
+            }
+        });
     });
 </script>
 
@@ -41,14 +68,14 @@
                 </div>
                 
                 <div class="cta-buttons" class:animate-fade-in={isVisible}>
-                    <a href="/register" class="cyber-button">
+                    <a href="/register" class="cyber-button" on:click={() => handleCTAClick('register')}>
                         <span class="btn-icon">⚡</span>
                         <span class="btn-text">
                             <span class="desktop-text">INITIALIZE_SESSION</span>
                             <span class="mobile-text">INIT</span>
                         </span>
                     </a>
-                    <a href="/login" class="cyber-button secondary">
+                    <a href="/login" class="cyber-button secondary" on:click={() => handleCTAClick('login')}>
                         <span class="btn-icon">🔒</span>
                         <span class="btn-text">
                             <span class="desktop-text">ACCESS_PORTAL</span>

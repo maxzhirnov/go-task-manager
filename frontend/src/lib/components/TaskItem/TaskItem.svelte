@@ -4,7 +4,6 @@
     import { showError } from '$lib/stores.js';
     import { dragHandle } from 'svelte-dnd-action';
     import Time from "svelte-time";
-    import { Analytics } from '$lib/analytics';
 
     import FormattedTime from './FormattedTime2.svelte';
     import TechButton from './TechButton.svelte';
@@ -28,11 +27,6 @@
             const updatedTasks = await api.fetchTasks();
             tasks.set(updatedTasks);
 
-            Analytics.track('Task Status Updated', {
-                taskId: task.id,
-                status: newStatus
-            });
-
         } catch (error) {
             showError(error.message);
         }
@@ -43,10 +37,6 @@
             await api.deleteTask(task.id);
             const updatedTasks = await api.fetchTasks();
             tasks.set(updatedTasks);
-
-            Analytics.track('Task Deleted', {
-                taskId: task.id
-                });
         } catch (error) {
             showError(error.message);
         }
@@ -64,13 +54,6 @@
             const updatedTasks = await api.fetchTasks();
             tasks.set(updatedTasks);
             isEditing = false;
-            
-            Analytics.track('Task Edited', {
-                taskId: task.id,
-                title: editTitle,
-                description: editDescription,
-                status: newStatus
-            });
         } catch (error) {
             showError(error.message);
         }
@@ -81,9 +64,6 @@
         editDescription = task.description;
         editStatus = task.status;
         isEditing = false;
-        Analytics.track('Task Edit Cancelled', {
-            taskId: task.id
-        });
     }
 </script>
 

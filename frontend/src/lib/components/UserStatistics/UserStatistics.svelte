@@ -4,7 +4,6 @@
     import { showError } from '$lib/stores';
     import LoadingSpinner from '../Common/LoadingSpinner.svelte';
     import StatsIcon from './StatsIcon.svelte';
-    import { Analytics } from '$lib/analytics';
     import { on } from 'svelte/events';
     
     export let statistics = null;
@@ -162,7 +161,6 @@
     // Animation trigger
     let isVisible = false;
     onMount(() => {
-        Analytics.track('User Statistics Loaded');
         setTimeout(() => isVisible = true, 100);
     });
 

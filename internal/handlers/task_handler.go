@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/maxzhirnov/go-task-manager/internal/models"
+	"github.com/maxzhirnov/go-task-manager/pkg/analytics"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
 )
 
@@ -26,7 +27,8 @@ import (
 // and data validation.
 type TaskHandler struct {
 	// DB provides database access for task operations
-	DB database.DB
+	DB        database.DB
+	analytics analytics.Tracker
 }
 
 // NewTaskHandler creates a new instance of TaskHandler.
@@ -36,8 +38,10 @@ type TaskHandler struct {
 //
 // Returns:
 //   - *TaskHandler: Configured task handler
-func NewTaskHandler(db database.DB) *TaskHandler {
-	return &TaskHandler{DB: db}
+func NewTaskHandler(db database.DB, analytics analytics.Tracker) *TaskHandler {
+	return &TaskHandler{
+		DB:        db,
+		analytics: analytics}
 }
 
 // GetTasks retrieves all tasks for the authenticated user.
@@ -194,11 +198,29 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 //	    "updated_at": "2024-01-01T12:00:00Z"
 //	}
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	log.Printf("Received create task request")
+
+	// Extract user information from JWT claims
+	claims, ok := ctx.Value("claims").(*middleware.Claims)
+	if !ok {
+		h.analytics.Track(ctx, "Task Creation Failed", "", map[string]any{
+			"reason":     "unauthorized",
+			"ip_address": r.RemoteAddr,
+		})
+		log.Printf("Task creation failed: missing or invalid claims in context")
+		JSONError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Parse and validate request body
 	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		h.analytics.Track(ctx, "Task Creation Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":  "invalid_input",
+			"error":   err.Error(),
+			"user_id": claims.UserID,
+		})
 		log.Printf("Error decoding task: %v", err)
 		JSONError(w, "Invalid input data", http.StatusBadRequest)
 		return
@@ -207,6 +229,10 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	// Validate required fields
 	if task.Title == "" {
+		h.analytics.Track(ctx, "Task Creation Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":  "empty_title",
+			"user_id": claims.UserID,
+		})
 		log.Printf("Task creation failed: empty title")
 		JSONError(w, "Title is required", http.StatusBadRequest)
 		return
@@ -218,35 +244,39 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		task.Status = "pending"
 	}
 
-	// Extract user information from JWT claims
-	claims, ok := r.Context().Value("claims").(*middleware.Claims)
-	if !ok {
-		log.Printf("Task creation failed: missing or invalid claims in context")
-		JSONError(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
 	// Associate task with authenticated user
 	task.UserID = claims.UserID
 	log.Printf("Associated task with user ID: %d", task.UserID)
 
 	// Create task in database
 	if err := task.CreateTask(h.DB); err != nil {
+		h.analytics.Track(ctx, "Task Creation Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":     "database_error",
+			"error":      err.Error(),
+			"user_id":    claims.UserID,
+			"task_title": task.Title,
+		})
 		log.Printf("Error creating task in database: %v", err)
-		log.Printf("Failed task details: %+v", task)
 		JSONError(w, "Failed to create task", http.StatusInternalServerError)
 		return
 	}
 
+	h.analytics.Track(ctx, "Task Created", strconv.Itoa(claims.UserID), map[string]any{
+		"user_id":         claims.UserID,
+		"task_id":         task.ID,
+		"task_title":      task.Title,
+		"task_status":     task.Status,
+		"has_description": task.Description != "",
+	})
+
+	log.Printf("Successfully created task ID: %d for user ID: %d", task.ID, task.UserID)
+
 	// Send successful response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(task); err != nil {
-		log.Printf("Error encoding response: %v", err)
-		return
-	}
-
-	log.Printf("Successfully created task ID: %d for user ID: %d", task.ID, task.UserID)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Task created",
+	})
 }
 
 // UpdateTask handles the modification of an existing task.
@@ -292,11 +322,26 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 //	}
 func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received task update request")
+	ctx := r.Context()
+	claims, ok := ctx.Value("claims").(*middleware.Claims)
+	if !ok {
+		h.analytics.Track(ctx, "Task Update Failed", "", map[string]any{
+			"reason":     "unauthorized",
+			"ip_address": r.RemoteAddr,
+		})
+		JSONError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Extract and validate task ID from URL parameters
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
+		h.analytics.Track(ctx, "Task Update Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":  "invalid_task_id",
+			"task_id": vars["id"],
+			"user_id": claims.UserID,
+		})
 		log.Printf("Invalid task ID format: %s", vars["id"])
 		JSONError(w, "Invalid task ID", http.StatusBadRequest)
 		return
@@ -305,6 +350,12 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	// Parse and validate request body
 	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		h.analytics.Track(ctx, "Task Update Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":  "invalid_input",
+			"error":   err.Error(),
+			"task_id": id,
+			"user_id": claims.UserID,
+		})
 		log.Printf("Error decoding task update data: %v", err)
 		JSONError(w, "Invalid input data", http.StatusBadRequest)
 		return
@@ -316,6 +367,12 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	// Validate task status if provided
 	if err := task.ValidateStatus(); err != nil {
+		h.analytics.Track(ctx, "Task Update Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":  "invalid_status",
+			"error":   err.Error(),
+			"task_id": id,
+			"user_id": claims.UserID,
+		})
 		log.Printf("Invalid task status: %v", err)
 		JSONError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -323,19 +380,29 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	// Update task in database
 	if err := task.UpdateTask(h.DB); err != nil {
+		h.analytics.Track(ctx, "Task Update Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":  "database_error",
+			"error":   err.Error(),
+			"task_id": id,
+			"user_id": claims.UserID,
+		})
 		log.Printf("Error updating task %d: %v", id, err)
 		JSONError(w, "Failed to update task", http.StatusInternalServerError)
 		return
 	}
 
+	h.analytics.Track(ctx, "Task Updated", strconv.Itoa(claims.UserID), map[string]any{
+		"task_id":         id,
+		"user_id":         claims.UserID,
+		"new_status":      task.Status,
+		"has_description": task.Description != "",
+		"title_updated":   task.Title != "",
+	})
+	log.Printf("Successfully updated task ID: %d", id)
+
 	// Send successful response
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(task); err != nil {
-		log.Printf("Error encoding response: %v", err)
-		return
-	}
-
-	log.Printf("Successfully updated task ID: %d", id)
+	json.NewEncoder(w).Encode(task)
 }
 
 // DeleteTask handles the removal of an existing task.
@@ -361,10 +428,26 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 //
 //	DELETE /api/tasks/1
 func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	claims, ok := ctx.Value("claims").(*middleware.Claims)
+	if !ok {
+		h.analytics.Track(ctx, "Task Deletion Failed", "", map[string]any{
+			"reason":     "unauthorized",
+			"ip_address": r.RemoteAddr,
+		})
+		JSONError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Extract and validate task ID from URL parameters
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
+		h.analytics.Track(ctx, "Task Deletion Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":  "invalid_task_id",
+			"task_id": vars["id"],
+			"user_id": claims.UserID,
+		})
 		log.Printf("Invalid task ID format: %s", vars["id"])
 		JSONError(w, "Invalid task ID", http.StatusBadRequest)
 		return
@@ -372,14 +455,29 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 	// Delete task from database
 	if err := models.DeleteTask(h.DB, id); err != nil {
+		h.analytics.Track(ctx, "Task Deletion Failed", strconv.Itoa(claims.UserID), map[string]any{
+			"reason":  "database_error",
+			"error":   err.Error(),
+			"task_id": id,
+			"user_id": claims.UserID,
+		})
 		log.Printf("Error deleting task %d: %v", id, err)
 		JSONError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	h.analytics.Track(ctx, "Task Deleted", strconv.Itoa(claims.UserID), map[string]any{
+		"task_id": id,
+		"user_id": claims.UserID,
+	})
+
+	log.Printf("Successfully deleted task ID: %d", id)
+
 	// Send successful response with no content
 	w.WriteHeader(http.StatusNoContent)
-	log.Printf("Successfully deleted task ID: %d", id)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Deleted task successfully",
+	})
 }
 
 // UpdateTaskPositions handles the reordering of multiple tasks for a user.

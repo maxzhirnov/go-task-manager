@@ -40,6 +40,7 @@ func setupRouter(cfg *config.Config) *mux.Router {
 
 	// Auth handlers
 	authHandler := handlers.NewAuthHandler(db, emailService, mixpanel, cfg)
+
 	r.HandleFunc("/api/register", authHandler.RegisterHandler).Methods("POST")
 	r.HandleFunc("/api/login", authHandler.LoginHandler).Methods("POST")
 	r.HandleFunc("/api/refresh", authHandler.RefreshTokenHandler).Methods("POST")
@@ -49,9 +50,11 @@ func setupRouter(cfg *config.Config) *mux.Router {
 	r.HandleFunc("/api/reset-password", authHandler.ResetPasswordHandler).Methods("POST")
 
 	// Task handlers
-	taskHandler := handlers.NewTaskHandler(db)
+	taskHandler := handlers.NewTaskHandler(db, mixpanel)
 	userHandler := handlers.NewUserHandler(db)
+
 	api := r.PathPrefix("/api").Subrouter()
+
 	api.Use(middleware.JWTAuthMiddleware)
 	api.HandleFunc("/tasks", taskHandler.GetTasks).Methods("GET")
 	api.HandleFunc("/tasks", taskHandler.CreateTask).Methods("POST")

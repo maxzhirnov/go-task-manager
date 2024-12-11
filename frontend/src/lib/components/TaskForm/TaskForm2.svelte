@@ -3,7 +3,6 @@
     import { api } from '$lib/api.js';
     import { tasks } from '$lib/stores.js';
     import { mdiPlus, mdiChevronDown } from '@mdi/js';
-    import { Analytics } from '$lib/analytics';
 
 
     let title = '';
@@ -21,10 +20,7 @@
             return;
         }
 
-        Analytics.track('Task Created', {
-            type: 'quick',
-            title: title
-        });
+
 
         isSubmitting = true;
         try {
@@ -45,13 +41,6 @@
             showError("Task title cannot exceed 100 characters.");
             return;
         }
-
-        Analytics.track('Task Created', {
-            type: 'full',
-            title: title,
-            description: description,
-            status: status
-        });
 
         isSubmitting = true;
         try {

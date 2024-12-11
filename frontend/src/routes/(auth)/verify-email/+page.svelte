@@ -3,7 +3,6 @@
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
-    import { Analytics } from '$lib/analytics';
 
     let status = 'verifying';
     let message = 'INITIALIZING VERIFICATION SEQUENCE...';
@@ -33,7 +32,6 @@
             progress = 100;
             status = 'success';
             message = 'EMAIL VERIFICATION COMPLETE. ACCESS GRANTED.';
-            Analytics.track('Email Verification Completed');
         } catch (error) {
             status = 'error';
             message = `ERROR: ${error.message}`;

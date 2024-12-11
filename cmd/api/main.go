@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/maxzhirnov/go-task-manager/internal/handlers"
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
+	"github.com/maxzhirnov/go-task-manager/pkg/analytics"
 	"github.com/maxzhirnov/go-task-manager/pkg/config"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
 	"github.com/maxzhirnov/go-task-manager/pkg/email"
@@ -17,6 +18,9 @@ func setupRouter(cfg *config.Config) *mux.Router {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	// Initialize Mixpanel
+	mixpanel := analytics.NewMixpanel(cfg.Mixpanel.Token)
 
 	// Initialize email service
 	emailService, err := email.NewEmailService(
@@ -35,7 +39,7 @@ func setupRouter(cfg *config.Config) *mux.Router {
 	r := mux.NewRouter()
 
 	// Auth handlers
-	authHandler := handlers.NewAuthHandler(db, emailService, cfg)
+	authHandler := handlers.NewAuthHandler(db, emailService, mixpanel, cfg)
 	r.HandleFunc("/api/register", authHandler.RegisterHandler).Methods("POST")
 	r.HandleFunc("/api/login", authHandler.LoginHandler).Methods("POST")
 	r.HandleFunc("/api/refresh", authHandler.RefreshTokenHandler).Methods("POST")

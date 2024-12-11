@@ -39,6 +39,10 @@ type Config struct {
 		}
 	}
 
+	Mixpanel struct {
+		Token string // Mixpanel API token
+	}
+
 	// Server contains HTTP server settings
 	Server struct {
 		Port string // HTTP server port
@@ -103,6 +107,9 @@ func LoadConfig() (*Config, error) {
 	config.SMTP.FromName = getEnv("SMTP_FROM_NAME", "Task Manager")
 	config.SMTP.BaseURL = getEnv("SMTP_BASE_URL", "http://localhost:8080")
 	config.SMTP.Templates.Path = getEnv("SMTP_TEMPLATES_PATH", "templates/email")
+
+	// Mixpanel configuration
+	config.Mixpanel.Token = getEnv("MIXPANEL_TOKEN", "")
 
 	// Server configuration
 	config.Server.Port = getEnv("SERVER_PORT", "8080")

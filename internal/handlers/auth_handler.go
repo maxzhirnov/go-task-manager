@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
 	"github.com/maxzhirnov/go-task-manager/internal/models"
+	"github.com/maxzhirnov/go-task-manager/pkg/analytics"
 	"github.com/maxzhirnov/go-task-manager/pkg/config"
 	"github.com/maxzhirnov/go-task-manager/pkg/database"
 	"github.com/maxzhirnov/go-task-manager/pkg/email"
@@ -25,6 +27,9 @@ type AuthHandler struct {
 
 	// EmailService handles sending verification and notification emails
 	EmailService email.EmailSender
+
+	// Mixpanel tracks user actions
+	Analytics analytics.Tracker
 
 	// GenerateJWT creates new JWT access tokens
 	GenerateJWT func(userID int, username string, email string) (string, error)
@@ -46,10 +51,11 @@ type AuthHandler struct {
 //
 // Returns:
 //   - *AuthHandler: Configured authentication handler
-func NewAuthHandler(db database.DB, emailService email.EmailSender, config *config.Config) *AuthHandler {
+func NewAuthHandler(db database.DB, emailService email.EmailSender, analytics analytics.Tracker, config *config.Config) *AuthHandler {
 	return &AuthHandler{
 		DB:                   db,
 		EmailService:         emailService,
+		Analytics:            analytics,
 		GenerateJWT:          middleware.GenerateJWT,
 		GenerateRefreshToken: middleware.GenerateRefreshToken,
 		ValidateRefreshToken: middleware.ValidateRefreshToken,
@@ -106,6 +112,15 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+	deviceID := r.Header.Get("X-Device-ID")
+
+	h.Analytics.Track(ctx, "Registration Attempted", deviceID, map[string]any{
+		"email":     req.Email,
+		"timestamp": time.Now(),
+		"ip":        r.RemoteAddr,
+	})
+
 	// Ensure required fields are present
 	if req.Email == "" || req.Password == "" {
 		JSONError(w, "Email and password are required", http.StatusBadRequest)
@@ -129,9 +144,19 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if err := user.CreateUser(h.DB); err != nil {
 		// Handle duplicate email conflict
 		if strings.Contains(err.Error(), "email already exists") {
+
+			h.Analytics.Track(ctx, "Registration Failed", deviceID, map[string]any{
+				"reason": "email_exists",
+				"email":  req.Email,
+			})
+
 			JSONError(w, "Email already exists", http.StatusConflict)
 			return
 		}
+		h.Analytics.Track(ctx, "Registration Failed", deviceID, map[string]any{
+			"reason": "server_error",
+			"error":  err.Error(),
+		})
 		// Handle other database errors
 		log.Printf("Failed to create user: %v", err)
 		JSONError(w, "Error creating user", http.StatusInternalServerError)
@@ -148,6 +173,18 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Failed to send verification email: %v", err)
 		}
 	}
+
+	h.Analytics.Track(ctx, "Registration Completed", strconv.Itoa(user.ID), map[string]any{
+		"user_id":   user.ID,
+		"email":     user.Email,
+		"timestamp": time.Now(),
+	})
+
+	h.Analytics.SetUserProfile(ctx, strconv.Itoa(user.ID), map[string]any{
+		"$email":      user.Email,
+		"signup_date": time.Now(),
+		"verified":    false,
+	})
 
 	// Return success response
 	log.Printf("User registered successfully: %s", user.Email)
@@ -199,15 +236,38 @@ type LoginRequest struct {
 //	    "refresh_token": "eyJhbGc..."
 //	}
 func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	deviceID := r.Header.Get("X-Device-ID")
+
 	// Parse and validate request body
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+		h.Analytics.Track(ctx, "Login Failed", deviceID, map[string]any{
+			"reason": "invalid_request_body",
+			"error":  err.Error(),
+		})
+
 		JSONError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
+	// Track login attempt
+	h.Analytics.Track(ctx, "Login Attempted", deviceID, map[string]any{
+		"email":      req.Email,
+		"ip_address": r.RemoteAddr,
+		"user_agent": r.UserAgent(),
+	})
+
 	// Validate required fields
 	if req.Email == "" || req.Password == "" {
+
+		h.Analytics.Track(ctx, "Login Failed", deviceID, map[string]any{
+			"reason":       "missing_credentials",
+			"has_email":    req.Email != "",
+			"has_password": req.Password != "",
+		})
+
 		JSONError(w, "Email and password are required", http.StatusBadRequest)
 		return
 	}
@@ -216,10 +276,18 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserByEmail(h.DB, req.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			h.Analytics.Track(ctx, "Login Failed", deviceID, map[string]any{
+				"reason": "user_not_found",
+				"email":  req.Email,
+			})
 			// User not found, return generic error for security
 			JSONError(w, "Invalid credentials", http.StatusUnauthorized)
 			return
 		}
+		h.Analytics.Track(ctx, "Login Failed", deviceID, map[string]any{
+			"reason": "server_error",
+			"error":  err.Error(),
+		})
 		log.Printf("Database error during login: %v", err)
 		JSONError(w, "Server error", http.StatusInternalServerError)
 		return
@@ -227,12 +295,20 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure email is verified
 	if !user.IsVerified {
+		h.Analytics.Track(ctx, "Login Failed", deviceID, map[string]any{
+			"reason":  "email_not_verified",
+			"user_id": user.ID,
+		})
 		JSONError(w, "Please verify your email before logging in", http.StatusForbidden)
 		return
 	}
 
 	// Verify password
 	if err := user.CheckPassword(req.Password); err != nil {
+		h.Analytics.Track(ctx, "Login Failed", deviceID, map[string]any{
+			"reason":  "invalid_password",
+			"user_id": user.ID,
+		})
 		log.Printf("Failed password check for user %s: %v", user.Email, err)
 		JSONError(w, "Invalid credentials", http.StatusUnauthorized)
 		return
@@ -253,6 +329,22 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		JSONError(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		return
 	}
+
+	// Track successful login
+	h.Analytics.Track(ctx, "Login Successful", strconv.Itoa(user.ID), map[string]any{
+		"user_id":    user.ID,
+		"email":      user.Email,
+		"ip_address": r.RemoteAddr,
+		"user_agent": r.UserAgent(),
+	})
+
+	// Update user profile in Mixpanel
+	h.Analytics.SetUserProfile(ctx, strconv.Itoa(user.ID), map[string]any{
+		"$email":      user.Email,
+		"$name":       user.Username,
+		"last_login":  time.Now(),
+		"is_verified": user.IsVerified,
+	})
 
 	// Send successful response with tokens
 	w.Header().Set("Content-Type", "application/json")
@@ -368,9 +460,14 @@ func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request
 //	    "message": "Email verified successfully"
 //	}
 func (h *AuthHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	// Extract verification token from URL query parameters
 	token := r.URL.Query().Get("token")
 	if token == "" {
+		h.Analytics.Track(ctx, "Email Verification Failed", "", map[string]any{
+			"reason":     "missing_token",
+			"ip_address": r.RemoteAddr,
+		})
 		log.Printf("Email verification attempted without token")
 		JSONError(w, "Verification token is required", http.StatusBadRequest)
 		return
@@ -380,15 +477,41 @@ func (h *AuthHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 	err := models.VerifyEmail(h.DB, token)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid or expired") {
+			h.Analytics.Track(ctx, "Email Verification Failed", "", map[string]any{
+				"reason":     "invalid_token",
+				"error":      err.Error(),
+				"ip_address": r.RemoteAddr,
+			})
 			// Handle invalid or expired token
 			log.Printf("Invalid or expired verification token: %v", err)
 			JSONError(w, "Invalid or expired verification token", http.StatusBadRequest)
 			return
 		}
+		h.Analytics.Track(ctx, "Email Verification Failed", "", map[string]any{
+			"reason":     "server_error",
+			"error":      err.Error(),
+			"ip_address": r.RemoteAddr,
+		})
 		// Handle other verification errors
 		log.Printf("Email verification failed: %v", err)
 		JSONError(w, "Error verifying email", http.StatusInternalServerError)
 		return
+	}
+
+	// Get user info for tracking
+	user, err := models.GetUserByVerificationToken(h.DB, token)
+	if err == nil {
+		h.Analytics.Track(ctx, "Email Verified", strconv.Itoa(user.ID), map[string]any{
+			"email":             user.Email,
+			"verification_time": time.Now(),
+			"ip_address":        r.RemoteAddr,
+		})
+
+		// Update user profile
+		h.Analytics.SetUserProfile(ctx, strconv.Itoa(user.ID), map[string]any{
+			"email_verified":    true,
+			"verification_date": time.Now(),
+		})
 	}
 
 	// Send successful verification response
@@ -437,9 +560,15 @@ type ResendVerificationRequest struct {
 //	    "message": "Verification email sent successfully"
 //	}
 func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	// Parse and validate request body
 	var req ResendVerificationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Analytics.Track(ctx, "Verification Resend Failed", "", map[string]any{
+			"reason": "invalid_request",
+			"error":  err.Error(),
+			"email":  req.Email,
+		})
 		log.Printf("Failed to decode resend verification request: %v", err)
 		JSONError(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -448,6 +577,10 @@ func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.R
 	// Retrieve user from database
 	user, err := models.GetUserByEmail(h.DB, req.Email)
 	if err != nil {
+		h.Analytics.Track(ctx, "Verification Resend Failed", "", map[string]any{
+			"reason": "user_not_found",
+			"email":  req.Email,
+		})
 		log.Printf("User not found for verification resend: %s", req.Email)
 		JSONError(w, "User not found", http.StatusNotFound)
 		return
@@ -455,6 +588,11 @@ func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.R
 
 	// Check if email is already verified
 	if user.IsVerified {
+		h.Analytics.Track(ctx, "Verification Resend Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":  "already_verified",
+			"email":   user.Email,
+			"user_id": user.ID,
+		})
 		log.Printf("Attempted to resend verification for already verified email: %s", req.Email)
 		JSONError(w, "Email is already verified", http.StatusBadRequest)
 		return
@@ -463,6 +601,11 @@ func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.R
 	// Generate new verification token
 	token, err := models.CreateVerificationToken(h.DB, user.ID)
 	if err != nil {
+		h.Analytics.Track(ctx, "Verification Resend Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":  "token_generation_failed",
+			"error":   err.Error(),
+			"user_id": user.ID,
+		})
 		log.Printf("Failed to generate verification token: %v", err)
 		JSONError(w, "Error generating verification token", http.StatusInternalServerError)
 		return
@@ -470,10 +613,22 @@ func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.R
 
 	// Send verification email
 	if err := h.EmailService.SendVerificationEmail(user.Email, user.Username, token.Token); err != nil {
+		h.Analytics.Track(ctx, "Verification Resend Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":  "email_sending_failed",
+			"error":   err.Error(),
+			"user_id": user.ID,
+		})
 		log.Printf("Failed to send verification email: %v", err)
 		JSONError(w, "Error sending verification email", http.StatusInternalServerError)
 		return
 	}
+
+	// Track successful resend
+	h.Analytics.Track(ctx, "Verification Resend Successful", strconv.Itoa(user.ID), map[string]any{
+		"user_id":   user.ID,
+		"email":     user.Email,
+		"timestamp": time.Now(),
+	})
 
 	// Send successful response
 	w.WriteHeader(http.StatusOK)
@@ -500,13 +655,23 @@ func (h *AuthHandler) ResendVerificationHandler(w http.ResponseWriter, r *http.R
 // 4. Store token with expiry
 // 5. Send reset email
 func (h *AuthHandler) ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	// Track request metadata for security logging
+	ctx := r.Context()
 	requestIP := r.RemoteAddr
 	log.Printf("Received password reset request from IP: %s", requestIP)
 
-	// Decode and validate request
+	h.Analytics.Track(ctx, "Password Reset Requested", "", map[string]any{
+		"ip_address": requestIP,
+		"timestamp":  time.Now(),
+	})
+
+	// Decode and validate requestProcessing password reset request for email
 	var req models.ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", "", map[string]any{
+			"reason":     "invalid_request",
+			"ip_address": requestIP,
+			"error":      err.Error(),
+		})
 		log.Printf("Failed to decode password reset request from IP %s: %v", requestIP, err)
 		JSONError(w, "Invalid request", http.StatusBadRequest)
 		return
@@ -514,8 +679,15 @@ func (h *AuthHandler) ForgotPasswordHandler(w http.ResponseWriter, r *http.Reque
 
 	// Validate email format
 	if !isValidEmail(req.Email) {
+		h.Analytics.Track(ctx, "Password Reset Failed", "", map[string]any{
+			"reason":     "invalid_email_format",
+			"ip_address": requestIP,
+		})
 		log.Printf("Invalid email format in reset request from IP %s: %s", requestIP, req.Email)
-		JSONSuccess(w, "If the email exists, a reset link will be sent")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "If the email exists, a reset link will be sent",
+		})
 		return
 	}
 	log.Printf("Processing password reset request for email: %s", maskEmail(req.Email))
@@ -523,8 +695,12 @@ func (h *AuthHandler) ForgotPasswordHandler(w http.ResponseWriter, r *http.Reque
 	// Get user by email
 	user, err := models.GetUserByEmail(h.DB, req.Email)
 	if err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", "", map[string]any{
+			"reason":     "user_not_found",
+			"ip_address": requestIP,
+		})
 		log.Printf("User lookup failed for reset request: %v", err)
-		JSONSuccess(w, "If the email exists, a reset link will be sent")
+		JSONError(w, "User not found", http.StatusNotFound)
 		return
 	}
 	log.Printf("Found user for password reset: ID=%d", user.ID)
@@ -539,6 +715,11 @@ func (h *AuthHandler) ForgotPasswordHandler(w http.ResponseWriter, r *http.Reque
 	// Generate reset token
 	resetToken, err := generateResetToken()
 	if err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":     "token_generation_failed",
+			"user_id":    user.ID,
+			"ip_address": requestIP,
+		})
 		log.Printf("Failed to generate reset token for user %d: %v", user.ID, err)
 		JSONError(w, "Failed to process request", http.StatusInternalServerError)
 		return
@@ -552,6 +733,11 @@ func (h *AuthHandler) ForgotPasswordHandler(w http.ResponseWriter, r *http.Reque
 	// Update user with reset token
 	err = user.UpdateResetToken(h.DB, resetToken, expiryTime)
 	if err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":     "token_save_failed",
+			"user_id":    user.ID,
+			"ip_address": requestIP,
+		})
 		log.Printf("Failed to save reset token for user %d: %v", user.ID, err)
 		JSONError(w, "Failed to process request", http.StatusInternalServerError)
 		return
@@ -565,16 +751,30 @@ func (h *AuthHandler) ForgotPasswordHandler(w http.ResponseWriter, r *http.Reque
 	// Send email with reset link
 	err = h.EmailService.SendPasswordResetEmail(user.Email, resetLink)
 	if err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":     "email_send_failed",
+			"user_id":    user.ID,
+			"ip_address": requestIP,
+		})
 		log.Printf("Failed to send reset email to user %d: %v", user.ID, err)
 		JSONError(w, "Failed to send reset email", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("Successfully sent reset email to user %d", user.ID)
+	// Track successful reset request
+	h.Analytics.Track(ctx, "Password Reset Email Sent", strconv.Itoa(user.ID), map[string]any{
+		"user_id":     user.ID,
+		"ip_address":  requestIP,
+		"expiry_time": expiryTime,
+	})
 
 	// TODOL: Record successful reset request
 	// h.recordPasswordResetAttempt(user.ID)
 
-	JSONSuccess(w, "If the email exists, a reset link will be sent")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "If the email exists, a reset link will be sent",
+	})
 }
 
 // ResetPasswordHandler processes password reset requests using a valid reset token.
@@ -588,11 +788,22 @@ func (h *AuthHandler) ForgotPasswordHandler(w http.ResponseWriter, r *http.Reque
 // 5. Update the password and clear the reset token
 // 6. Return success response
 func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	requestIP := r.RemoteAddr
 	log.Printf("Starting password reset process")
+	h.Analytics.Track(ctx, "Password Reset Attempted", "", map[string]any{
+		"ip_address": requestIP,
+		"timestamp":  time.Now(),
+	})
 
 	// Decode request body
 	var req models.ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", "", map[string]any{
+			"reason":     "invalid_request",
+			"error":      err.Error(),
+			"ip_address": requestIP,
+		})
 		log.Printf("Failed to decode reset password request: %v", err)
 		JSONError(w, "Invalid request", http.StatusBadRequest)
 		return
@@ -601,6 +812,10 @@ func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Reques
 
 	// Validate token length and format
 	if len(req.Token) == 0 {
+		h.Analytics.Track(ctx, "Password Reset Failed", "", map[string]any{
+			"reason":     "empty_token",
+			"ip_address": requestIP,
+		})
 		log.Printf("Empty reset token received")
 		JSONError(w, "Reset token is required", http.StatusBadRequest)
 		return
@@ -609,6 +824,11 @@ func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Reques
 	// Retrieve user by reset token
 	user, err := models.GetUserByResetToken(h.DB, req.Token)
 	if err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", "", map[string]any{
+			"reason":     "invalid_token",
+			"error":      err.Error(),
+			"ip_address": requestIP,
+		})
 		log.Printf("Failed to find user with reset token: %v", err)
 		JSONError(w, "Invalid or expired reset token", http.StatusBadRequest)
 		return
@@ -617,6 +837,12 @@ func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Reques
 
 	// Verify token expiration
 	if time.Now().After(user.ResetTokenExpires) {
+		h.Analytics.Track(ctx, "Password Reset Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":      "token_expired",
+			"user_id":     user.ID,
+			"ip_address":  requestIP,
+			"expiry_time": user.ResetTokenExpires,
+		})
 		log.Printf("Reset token expired for user %d. Expired at: %v", user.ID, user.ResetTokenExpires)
 		JSONError(w, "Reset token has expired", http.StatusBadRequest)
 		return
@@ -625,6 +851,11 @@ func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Reques
 
 	// Validate new password
 	if len(req.NewPassword) < 6 {
+		h.Analytics.Track(ctx, "Password Reset Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":     "password_too_short",
+			"user_id":    user.ID,
+			"ip_address": requestIP,
+		})
 		log.Printf("New password too short for user %d", user.ID)
 		JSONError(w, "Password must be at least 8 characters long", http.StatusBadRequest)
 		return
@@ -633,6 +864,11 @@ func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Reques
 	// Hash the new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":     "password_hash_failed",
+			"user_id":    user.ID,
+			"ip_address": requestIP,
+		})
 		log.Printf("Failed to hash new password for user %d: %v", user.ID, err)
 		JSONError(w, "Failed to process new password", http.StatusInternalServerError)
 		return
@@ -642,6 +878,11 @@ func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Reques
 	// Update password and clear reset token
 	err = user.UpdatePasswordAndClearResetToken(h.DB, string(hashedPassword))
 	if err != nil {
+		h.Analytics.Track(ctx, "Password Reset Failed", strconv.Itoa(user.ID), map[string]any{
+			"reason":     "update_failed",
+			"user_id":    user.ID,
+			"ip_address": requestIP,
+		})
 		log.Printf("Failed to update password for user %d: %v", user.ID, err)
 		JSONError(w, "Failed to update password", http.StatusInternalServerError)
 		return
@@ -654,7 +895,16 @@ func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Reques
 	//     log.Printf("Failed to send password change confirmation email to user %d: %v",
 	//         user.ID, err)
 	// }
+	// Track successful password reset
+	h.Analytics.Track(ctx, "Password Reset Successful", strconv.Itoa(user.ID), map[string]any{
+		"user_id":    user.ID,
+		"ip_address": requestIP,
+		"timestamp":  time.Now(),
+	})
 
 	log.Printf("Password reset successful for user %d", user.ID)
-	JSONSuccess(w, "Password has been reset successfully")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Password has been reset successfully",
+	})
 }

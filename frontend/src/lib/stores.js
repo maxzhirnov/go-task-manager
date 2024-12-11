@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { Analytics } from './analytics';
 
 export const tasks = writable([]);
 export const errorMessage = writable('');
@@ -7,6 +8,11 @@ export const user = writable(null);
 
 export function showError(message) {
     errorMessage.set(message);
+
+    Analytics.track('Error accured', {
+        msg: message
+    })
+    
     setTimeout(() => errorMessage.set(''), 3000);
 }
 

@@ -2,7 +2,7 @@ import mixpanel from 'mixpanel-browser';
 
 // Initialize Mixpanel
 mixpanel.init('9ecff9b2013eeaeda0a3c0635fa9e084', {
-    debug: import.meta.env.DEV,
+    debug: false, // import.meta.env.DEV,
     track_pageview: true,
     persistence: 'localStorage',
     ignore_dnt: true,
@@ -49,9 +49,9 @@ export const Analytics = {
             $last_login: new Date().toISOString(),
         });
 
-        Analytics.track('User Logged In', {
-            loginTime: new Date().toISOString()
-        });
+        // Analytics.track('User Logged In', {
+        //     loginTime: new Date().toISOString()
+        // });
     },
 
     clearUser: () => {

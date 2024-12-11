@@ -1,6 +1,5 @@
 <script>
     import { goto } from '$app/navigation';
-    import { Analytics } from '$lib/analytics';
     
     let email = '';
     let password = '';
@@ -30,10 +29,6 @@
             const { access_token, refresh_token } = await response.json();
             localStorage.setItem("jwt", access_token);
             localStorage.setItem("refresh_token", refresh_token);
-
-            Analytics.track('Login Successful', {
-                email: email
-            });
 
             goto('/tasks');
         } catch (error) {

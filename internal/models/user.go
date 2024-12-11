@@ -829,6 +829,35 @@ func GetUserByID(db database.DB, id int) (User, error) {
 	return user, nil
 }
 
+func GetUserByVerificationToken(db database.DB, token string) (User, error) {
+	var user User
+	query := `
+        SELECT u.* FROM users u
+        INNER JOIN verification_tokens vt ON u.id = vt.user_id
+        WHERE vt.token = $1 
+        AND vt.expires_at > NOW() 
+        AND vt.used_at IS NULL
+    `
+	err := db.QueryRow(query, token).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Username,
+		&user.Password,
+		&user.IsVerified,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return User{}, fmt.Errorf("invalid or expired token")
+		}
+		return User{}, err
+	}
+
+	return user, nil
+}
+
 // UpdateProfile updates a user's profile information in the database.
 // It supports updating username and/or password, requiring current password verification.
 //

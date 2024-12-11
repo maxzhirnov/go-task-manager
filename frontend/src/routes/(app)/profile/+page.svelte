@@ -62,7 +62,7 @@
             // Refresh token after successful update
             const newToken = await api.refreshToken();
             if (!newToken) {
-                console.error('Failed to refresh token after username update');
+                showError('Failed to refresh token after username update');
                 return;
             }
 
@@ -78,12 +78,14 @@
 
             showSuccess("Username updated successfully");
         } catch (error) {
-            console.error('Update failed:', error);
+            showError('Update failed:', error);
             
             if (error.status === 401) {
+                showError('Invalid current password');
                 formErrors.currentPassword = 'Invalid current password';
             } else if (error.status === 400) {
                 if (error.details?.error) {
+                    showError(error.details.error);
                     formErrors.username = error.details.error;
                 }
             } else {

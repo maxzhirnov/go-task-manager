@@ -50,34 +50,6 @@ func JSONError(w http.ResponseWriter, message string, status int) {
 	}
 }
 
-// JSONSuccess writes a success response with the provided message.
-// The response is formatted as JSON: {"message": "your message here"}
-//
-// Parameters:
-// - w: HTTP response writer
-// - message: Success message to include in response
-//
-// Example response:
-// {"message": "Password has been reset successfully"}
-func JSONSuccess(w http.ResponseWriter, message string) {
-	// Set content type before writing response
-	w.Header().Set("Content-Type", "application/json")
-
-	// Create response structure
-	response := map[string]string{
-		"message": message,
-		"status":  "success",
-	}
-
-	// Encode and write response
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		// If JSON encoding fails, log error and send simple error response
-		log.Printf("Failed to encode JSON response: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-}
-
 // generateResetToken creates a cryptographically secure random token for password reset.
 // The token is URL-safe base64 encoded and has 32 bytes of entropy.
 //

@@ -1,6 +1,4 @@
 <script>
-    import { Analytics } from "$lib/analytics";
-    
     let email = '';
     let password = '';
     let errorMessage = '';
@@ -27,9 +25,6 @@
             successMessage = "INITIALIZATION COMPLETE! VERIFY YOUR ACCESS NODE VIA EMAIL.";
             errorMessage = '';
 
-            Analytics.track('Registration Started', {
-                email: email
-            });
         } catch (error) {
             errorMessage = error.message;
             successMessage = '';
@@ -41,9 +36,6 @@
     async function handleResendVerification() {
         loading = true;
         try {
-            Analytics.track('Resend Verification Requested', {
-                email: email
-            });
             const response = await fetch("/api/resend-verification", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

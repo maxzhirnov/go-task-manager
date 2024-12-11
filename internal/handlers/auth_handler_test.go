@@ -13,6 +13,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/maxzhirnov/go-task-manager/internal/middleware"
+	"github.com/maxzhirnov/go-task-manager/pkg/analytics"
 	"github.com/maxzhirnov/go-task-manager/pkg/email"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
@@ -25,9 +26,13 @@ func newTestAuthHandler(t *testing.T) (*AuthHandler, sqlmock.Sqlmock, func()) {
 	}
 
 	mockEmail := email.NewMockEmailService()
+
+	mockAnalytics := analytics.NewMock("mock-token", false)
+
 	handler := &AuthHandler{
 		DB:           db,
 		EmailService: mockEmail,
+		Analytics:    mockAnalytics,
 		GenerateJWT: func(userID int, username string, email string) (string, error) {
 			return "mock-access-token", nil
 		},

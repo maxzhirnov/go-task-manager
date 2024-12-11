@@ -6,6 +6,7 @@
     let isVisible = false;
     let startTime = performance.now();
     let hasScrolled = false;
+    let lastScrollTrack = 0;
 
     function handleCTAClick(button_type) {
         Analytics.track('CTA Clicked', {
@@ -14,6 +15,18 @@
         });
     }
 
+    function getScrollDepth() {
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Calculate percentage scrolled
+        const scrollPercentage = (scrollTop / (documentHeight - windowHeight)) * 100;
+        
+        return Math.round(scrollPercentage);
+    }
+
+
     onMount(() => {
         isVisible = true;
 
@@ -21,8 +34,12 @@
             load_time: performance.now() - startTime
         });
 
-        // Track scroll depth
+        // Track scroll with throttling
         window.addEventListener('scroll', () => {
+            const now = Date.now();
+            if (now - lastScrollTrack < 1000) return; // Throttle to once per second
+            lastScrollTrack = now;
+
             if (!hasScrolled) {
                 hasScrolled = true;
                 Analytics.track('Content Scroll Started');
